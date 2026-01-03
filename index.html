@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codmegle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        .scale-x-flip { transform: scaleX(-1); }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-300 p-4 flex justify-between items-center shadow-sm h-16 shrink-0 z-10">
+        <div class="flex items-center select-none cursor-pointer" onclick="window.location.reload()">
+            <span class="text-2xl font-bold tracking-tight text-gray-700">Cod</span>
+            <span class="text-2xl font-bold tracking-tight text-white bg-orange-500 px-1 transform -rotate-2 shadow-sm inline-block ml-0.5 rounded-sm">megle</span>
+        </div>
+        <div class="text-sm md:text-base text-gray-500 font-medium" id="online-count">
+            Connecting...
+        </div>
+    </header>
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="flex-1 flex flex-col items-center justify-center bg-gray-50 p-6 text-center overflow-y-auto">
+        <div class="bg-white p-8 rounded-lg shadow-md max-w-2xl w-full border border-gray-200">
+            <h1 class="text-3xl md:text-5xl font-bold text-gray-800 mb-6">Talk to strangers!</h1>
+            <p class="text-gray-600 mb-8 text-lg">
+                Omegle (Codmegle) is a great place to meet new friends. When you use Codmegle, 
+                we pick someone else at random and let you talk one-on-one. 
+            </p>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 text-left text-sm text-yellow-800">
+                <p class="font-bold">Terms of Service:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                    <li>You must be 18+ to use this site.</li>
+                    <li>Do not transmit nudity, sexually explicit content, or illegal material.</li>
+                    <li>Be respectful to others.</li>
+                    <li><strong>Opening two tabs allows you to chat with yourself for testing!</strong></li>
+                </ul>
+            </div>
+
+            <div class="space-y-4">
+                <div class="text-gray-700 font-medium mb-2">Start chatting:</div>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="app.startChat('text')" class="px-8 py-4 bg-white border-2 border-gray-300 text-gray-700 font-bold text-xl rounded hover:bg-gray-50 transition-colors shadow-sm active:translate-y-0.5">
+                        Text only
+                    </button>
+                    <button onclick="app.startChat('video')" class="px-8 py-4 bg-blue-600 text-white font-bold text-xl rounded hover:bg-blue-700 transition-colors shadow-sm active:translate-y-0.5 flex items-center justify-center gap-2">
+                        <i data-lucide="video" class="w-6 h-6"></i>
+                        Video
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chat-screen" class="hidden flex-1 flex flex-col h-full overflow-hidden bg-gray-100">
+        
+        <!-- Video Container -->
+        <div id="video-container" class="hidden h-64 sm:h-80 bg-black relative flex justify-center items-center shrink-0 border-b border-gray-700">
+            <div class="w-full h-full relative">
+                <!-- Remote Video Placeholder -->
+                <div class="w-full h-full flex items-center justify-center bg-gray-900 text-white" id="remote-video-container">
+                    <div class="text-center">
+                        <div class="animate-pulse mb-2"><i data-lucide="video" class="mx-auto text-gray-600 w-12 h-12"></i></div>
+                        <p class="text-gray-500 text-sm">Waiting for remote video...</p>
+                    </div>
+                </div>
+                <div id="video-waiting-msg" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-gray-400 hidden">
+                    Waiting for partner...
+                </div>
+
+                <!-- Local Video -->
+                <div class="absolute bottom-4 right-4 w-32 h-24 bg-gray-800 border-2 border-white shadow-lg overflow-hidden rounded">
+                    <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover scale-x-flip"></video>
+                    <div id="no-camera-msg" class="hidden w-full h-full flex items-center justify-center text-white text-xs">No Camera</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="flex-1 flex flex-col bg-white overflow-hidden relative border-t border-gray-200">
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-2 font-sans">
+                <div class="text-gray-500 text-sm mb-4 italic">You're talking to a random stranger. Say Hi!</div>
+                <!-- Messages will be injected here -->
+            </div>
+            
+            <div id="status-indicator" class="px-4 py-2 text-gray-500 italic text-sm animate-pulse hidden">
+                Looking for someone you can chat with...
+            </div>
+            <div id="disconnect-indicator" class="px-4 py-2 text-gray-500 font-bold text-sm hidden">
+                Stranger has disconnected.
+            </div>
+
+            <!-- Input Controls -->
+            <div class="p-4 bg-gray-100 border-t border-gray-300 flex items-center gap-2 shrink-0">
+                <button id="btn-stop-next" onclick="app.handleStopNext()" class="h-12 px-6 font-bold rounded shadow-sm text-sm uppercase tracking-wide transition-all bg-white border hover:bg-red-50 text-gray-700">
+                    Stop <span class="ml-1 text-xs text-gray-400 block -mt-1">Esc</span>
+                </button>
+
+                <div class="flex-1 relative">
+                    <input type="text" id="msg-input" placeholder="Waiting..." disabled
+                        class="w-full h-12 pl-4 pr-12 rounded border border-gray-300 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:bg-gray-200 disabled:text-gray-500">
+                    <button id="btn-send" onclick="app.sendMessage()" disabled
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-800 disabled:text-gray-400">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import modules
+        import { initDOM } from './js/dom.js';
+        import { state } from './js/state.js';
+        import { startCamera, stopCamera } from './js/camera.js';
+        import { host, join, sendMessage as sendP2PMessage, disconnect as disconnectP2P, stopHosting } from './js/hosting.js';
+        import { startDiscoveryHost, connectToDiscovery } from './js/discovery.js';
+        import { showAlert } from './js/alert.js';
+        
+        // Make functions available globally
+        window.host = host;
+        window.join = join;
+        window.sendP2PMessage = sendP2PMessage;
+        window.disconnectP2P = disconnectP2P;
+        window.stopHosting = stopHosting;
+
+        // --- Logic ---
+        const app = {
+            user: null,
+            status: 'idle', // idle, searching, connected, disconnected
+            mode: 'text',
+            roomId: null,
+            searchInterval: null,
+            localStream: null,
+            lookingForMatch: false,
+
+            // DOM Elements
+            el: {
+                welcomeScreen: document.getElementById('welcome-screen'),
+                chatScreen: document.getElementById('chat-screen'),
+                messagesContainer: document.getElementById('messages-container'),
+                msgInput: document.getElementById('msg-input'),
+                btnSend: document.getElementById('btn-send'),
+                btnStopNext: document.getElementById('btn-stop-next'),
+                statusInd: document.getElementById('status-indicator'),
+                disconnectInd: document.getElementById('disconnect-indicator'),
+                videoContainer: document.getElementById('video-container'),
+                localVideo: document.getElementById('local-video'),
+                noCameraMsg: document.getElementById('no-camera-msg'),
+                videoWaitingMsg: document.getElementById('video-waiting-msg'),
+                onlineCount: document.getElementById('online-count')
+            },
+
+            init: async function() {
+                // Initialize DOM references
+                initDOM();
+                
+                // Initialize Lucide Icons
+                lucide.createIcons();
+
+                // Generate User ID
+                this.user = { uid: 'user_' + Math.random().toString(36).substr(2, 9) };
+                state.userId = this.user.uid;
+                
+                // Update online count
+                this.updateOnlineCount();
+                
+                // Update online count periodically
+                setInterval(() => {
+                    this.updateOnlineCount();
+                }, 5000); // Update every 5 seconds
+
+                // Start discovery host (for session discovery)
+                startDiscoveryHost();
+
+                // Check for join parameter in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const joinCode = urlParams.get('join');
+                if (joinCode) {
+                    this.joinSession(joinCode);
+                }
+
+                // Input Listeners
+                this.el.msgInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+
+                // Global Key Listener
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.handleStopNext();
+                });
+            },
+
+            // --- Core Actions ---
+
+            startChat: async function(mode) {
+                this.mode = mode;
+                state.mode = mode;
+                this.status = 'searching';
+                state.isSearching = true;
+                this.roomId = null;
+
+                // UI Updates
+                this.el.welcomeScreen.classList.add('hidden');
+                this.el.chatScreen.classList.remove('hidden');
+                this.el.messagesContainer.innerHTML = '<div class="text-gray-500 text-sm mb-4 italic">Looking for someone to chat with...</div>';
+                
+                // Video UI
+                if (mode === 'video') {
+                    this.el.videoContainer.classList.remove('hidden');
+                    try {
+                        await this.startCamera();
+                    } catch (e) {
+                        console.error("Camera error:", e);
+                        showAlert("Could not access camera. Starting in text mode.", 'warning');
+                        this.mode = 'text';
+                        state.mode = 'text';
+                        this.el.videoContainer.classList.add('hidden');
+                    }
+                } else {
+                    this.el.videoContainer.classList.add('hidden');
+                    this.stopCamera();
+                }
+
+                this.updateUIState();
+                this.startMatching();
+            },
+            
+            startMatching: async function() {
+                this.lookingForMatch = true;
+                
+                // Strategy: Become a host first, then continuously search for available hosts via discovery
+                // This way we're ready to accept connections immediately
+                
+                // Start hosting (this will generate a 5-character code and register with discovery)
+                try {
+                    await host();
+                    
+                    // Wait for host peer to be ready before searching
+                    await new Promise((resolve) => {
+                        if (state.peer && state.peer.open) {
+                            resolve();
+                        } else if (state.peer) {
+                            state.peer.once('open', resolve);
+                        } else {
+                            setTimeout(resolve, 2000); // Fallback timeout
+                        }
+                    });
+                    
+                    // Continuously search for available hosts via discovery and connect
+                    let isSearching = false; // Prevent concurrent searches
+                    let attemptedPeers = new Set(); // Track attempted peers to avoid immediate retries
+                    let currentConnectionAttempt = null; // Track current connection attempt
+                    
+                    const searchInterval = setInterval(async () => {
+                        // Stop searching if already connected or not looking anymore
+                        if (!this.lookingForMatch || state.isConnected) {
+                            clearInterval(searchInterval);
+                            this.searchInterval = null;
+                            return;
+                        }
+                        
+                        // Don't search if we're currently attempting a connection (unless it's been too long)
+                        if (currentConnectionAttempt) {
+                            // If we've been trying for more than 10 seconds, clear it and try next
+                            return;
+                        }
+                        
+                        // Prevent concurrent discovery calls
+                        if (isSearching) {
+                            return;
+                        }
+                        
+                        isSearching = true;
+                        try {
+                            const sessions = await connectToDiscovery();
+                            
+                            // Filter out our own session, attempted peers, and get available Codmegle hosts
+                            // Only 5-character codes are valid Codmegle sessions
+                            const availableHosts = sessions.filter(s => {
+                                // Strictly avoid self-connection - check against our current share code
+                                const isNotSelf = s.code !== state.currentShareCode;
+                                const isValidCode = s.code && s.code.length === 5;
+                                const notAttempted = !attemptedPeers.has(s.code);
+                                // Double-check: make sure code exists and is not empty
+                                const hasValidCode = s.code && s.code.trim().length > 0;
+                                return isNotSelf && isValidCode && notAttempted && hasValidCode;
+                            });
+                            
+                            if (sessions.length > 0 && availableHosts.length < sessions.length) {
+                                console.log(`Filtered: ${sessions.length - availableHosts.length} (self/attempted/invalid), ${availableHosts.length} available`);
+                            }
+                            
+                            if (availableHosts.length > 0) {
+                                // Randomly select a host from available ones
+                                const randomIndex = Math.floor(Math.random() * availableHosts.length);
+                                const selectedHost = availableHosts[randomIndex];
+                                
+                                console.log(`Found ${availableHosts.length} available hosts, attempting: ${selectedHost.code}`);
+                                
+                                // Mark as attempted
+                                attemptedPeers.add(selectedHost.code);
+                                
+                                // Clear old attempts after a while (30 seconds)
+                                if (attemptedPeers.size > 20) {
+                                    console.log('Clearing old attempted peers list');
+                                    attemptedPeers.clear();
+                                }
+                                
+                                // Set current connection attempt
+                                currentConnectionAttempt = selectedHost.code;
+                                
+                                // Wait a moment for peer readiness
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                
+                                // Double-check we're still looking
+                                if (!this.lookingForMatch || state.isConnected) {
+                                    currentConnectionAttempt = null;
+                                    isSearching = false;
+                                    return;
+                                }
+                                
+                                // Attempt connection directly - join() will handle it
+                                // Set timeout to clear attempt if not connected
+                                currentConnectionAttempt = selectedHost.code;
+                                
+                                // Call join directly - it will set up the connection
+                                join(selectedHost.code);
+                                
+                                // Set timeout to clear attempt flag if connection fails
+                                setTimeout(() => {
+                                    if (!state.isConnected && currentConnectionAttempt === selectedHost.code) {
+                                        console.log(`Connection to ${selectedHost.code} failed/timed out, will try next peer`);
+                                        currentConnectionAttempt = null;
+                                    }
+                                }, 12000); // 12 second timeout
+                            } else {
+                                // No available hosts - clear old attempts to retry them
+                                if (attemptedPeers.size > 10) {
+                                    console.log('No new peers, clearing attempted list to retry');
+                                    attemptedPeers.clear();
+                                }
+                                console.log('No available hosts found, waiting...');
+                            }
+                        } catch (err) {
+                            console.warn("Discovery error:", err);
+                            // Continue searching
+                        } finally {
+                            isSearching = false;
+                        }
+                    }, 2000); // Search every 2 seconds for faster matching
+                    
+                    // Store interval so we can clear it if needed
+                    this.searchInterval = searchInterval;
+                    
+                } catch (err) {
+                    console.error("Failed to start hosting:", err);
+                    showAlert("Failed to start connection. Please try again.", 'error');
+                    this.status = 'idle';
+                    state.isSearching = false;
+                    this.updateUIState();
+                }
+            },
+            
+            joinSession: function(code) {
+                // Only update UI if not already connected
+                if (!state.isConnected) {
+                    this.status = 'connected';
+                    state.isConnected = true;
+                    state.isSearching = false;
+                    this.lookingForMatch = false;
+                    this.stopBroadcastingSearch();
+                    
+                    // UI Updates
+                    this.el.welcomeScreen.classList.add('hidden');
+                    this.el.chatScreen.classList.remove('hidden');
+                    this.el.messagesContainer.innerHTML = '<div class="text-gray-500 text-sm mb-4 italic">Connected! Say Hi!</div>';
+                    
+                    // Show video container if in video mode
+                    if (this.mode === 'video') {
+                        this.el.videoContainer.classList.remove('hidden');
+                    }
+                    
+                    this.updateUIState();
+                }
+            },
+
+            handleStopNext: function() {
+                if (this.status === 'connected' || this.status === 'searching') {
+                    // Stop current connection
+                    this.disconnectChat();
+                } else if (this.status === 'disconnected') {
+                    // Start New Chat - fully reset and start fresh
+                    this.disconnectChat(); // Ensure clean
+                    
+                    // Small delay to ensure cleanup completes
+                    setTimeout(() => {
+                        this.startChat(this.mode);
+                    }, 500);
+                }
+            },
+
+            disconnectChat: function() {
+                // Send disconnect message and close P2P connection
+                disconnectP2P();
+                stopHosting();
+                
+                // Stop camera if in video mode
+                if (this.mode === 'video') {
+                    this.stopCamera();
+                }
+                
+                this.stopBroadcastingSearch();
+                this.status = 'disconnected';
+                this.lookingForMatch = false;
+                state.isConnected = false;
+                state.isSearching = false;
+                
+                // Clear messages
+                this.el.messagesContainer.innerHTML = '<div class="text-gray-500 text-sm mb-4 italic">Stranger has disconnected.</div>';
+                
+                this.updateUIState();
+            },
+
+            sendMessage: function() {
+                const text = this.el.msgInput.value.trim();
+                if (!text || this.status !== 'connected' || !state.isConnected) return;
+
+                const msgPayload = {
+                    type: 'CHAT',
+                    sender: this.user.uid,
+                    text: text,
+                    timestamp: Date.now()
+                };
+
+                // Add to local UI
+                this.appendMessage(msgPayload);
+
+                // Send via P2P data connection
+                if (!sendP2PMessage(text, this.user.uid)) {
+                    showAlert("Message could not be sent. Connection may be lost.", 'warning');
+                }
+
+                this.el.msgInput.value = '';
+            },
+
+            // --- Matchmaking Logic ---
+
+            stopBroadcastingSearch: function() {
+                if (this.searchInterval) {
+                    clearInterval(this.searchInterval);
+                    this.searchInterval = null;
+                }
+                this.lookingForMatch = false;
+            },
+
+            // --- Media Helper ---
+            
+            startCamera: async function() {
+                try {
+                    const stream = await startCamera();
+                    this.localStream = stream;
+                    if (this.el.localVideo) {
+                        this.el.localVideo.srcObject = stream;
+                        this.el.localVideo.classList.remove('hidden');
+                        // Ensure video plays
+                        try {
+                            await this.el.localVideo.play();
+                        } catch (playErr) {
+                            console.warn("Video play error:", playErr);
+                        }
+                    }
+                    if (this.el.noCameraMsg) {
+                        this.el.noCameraMsg.classList.add('hidden');
+                    }
+                } catch (e) {
+                    console.error("Camera error", e);
+                    if (this.el.localVideo) {
+                        this.el.localVideo.classList.add('hidden');
+                    }
+                    if (this.el.noCameraMsg) {
+                        this.el.noCameraMsg.classList.remove('hidden');
+                    }
+                    throw e;
+                }
+            },
+
+            stopCamera: function() {
+                stopCamera();
+                this.localStream = null;
+                if (this.el.localVideo) {
+                    this.el.localVideo.srcObject = null;
+                }
+            },
+
+            // --- UI Helpers ---
+
+            updateUIState: function() {
+                const isConnected = this.status === 'connected';
+                const isSearching = this.status === 'searching';
+                const isDisconnected = this.status === 'disconnected';
+
+                // Controls
+                this.el.msgInput.disabled = !isConnected;
+                this.el.btnSend.disabled = !isConnected;
+                this.el.msgInput.placeholder = isConnected ? "Type your message..." : (isDisconnected ? "Stranger disconnected." : "Waiting...");
+                
+                // Button Text
+                if (isDisconnected) {
+                    this.el.btnStopNext.className = "h-12 px-6 font-bold rounded shadow-sm text-sm uppercase tracking-wide transition-all bg-blue-600 hover:bg-blue-700 text-white";
+                    this.el.btnStopNext.innerHTML = 'New Chat <span class="ml-1 text-xs text-blue-200 block -mt-1">Esc</span>';
+                } else {
+                    this.el.btnStopNext.className = "h-12 px-6 font-bold rounded shadow-sm text-sm uppercase tracking-wide transition-all bg-white border hover:bg-red-50 text-gray-700";
+                    this.el.btnStopNext.innerHTML = 'Stop <span class="ml-1 text-xs text-gray-400 block -mt-1">Esc</span>';
+                }
+
+                // Indicators
+                this.el.statusInd.classList.toggle('hidden', !isSearching);
+                this.el.disconnectInd.classList.toggle('hidden', !isDisconnected);
+                this.el.videoWaitingMsg.classList.toggle('hidden', !isSearching);
+
+                // Auto Focus
+                if (isConnected) this.el.msgInput.focus();
+            },
+
+            appendMessage: function(msg) {
+                const isMe = msg.sender === this.user.uid;
+                const div = document.createElement('div');
+                div.className = "py-1";
+                div.innerHTML = `
+                    <span class="font-bold ${isMe ? 'text-blue-600' : 'text-red-600'}">${isMe ? 'You: ' : 'Stranger: '}</span>
+                    <span class="text-gray-800 break-words">${this.escapeHtml(msg.text)}</span>
+                `;
+                this.el.messagesContainer.appendChild(div);
+                this.el.messagesContainer.scrollTop = this.el.messagesContainer.scrollHeight;
+            },
+
+            escapeHtml: function(unsafe) {
+                return unsafe
+                     .replace(/&/g, "&amp;")
+                     .replace(/</g, "&lt;")
+                     .replace(/>/g, "&gt;")
+                     .replace(/"/g, "&quot;")
+                     .replace(/'/g, "&#039;");
+            },
+            
+            updateOnlineCount: async function() {
+                try {
+                    const sessions = await connectToDiscovery();
+                    // Count only valid Codmegle sessions (5-character codes)
+                    const validSessions = sessions.filter(s => s.code && s.code.length === 5);
+                    const count = validSessions.length;
+                    this.el.onlineCount.innerText = count > 0 ? count.toLocaleString() + ' online now' : 'Connecting...';
+                } catch (err) {
+                    console.warn("Error updating online count:", err);
+                    this.el.onlineCount.innerText = '... online now';
+                }
+            }
+        };
+
+        // Make app available globally
+        window.app = app;
+        
+        // Run
+        window.onload = function() {
+            app.init();
+        };
+
+    </script>
+</body>
+</html>
