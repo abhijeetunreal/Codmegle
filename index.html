@@ -286,10 +286,13 @@
                         
                         isSearching = true;
                         try {
-                            const sessions = await connectToDiscovery();
+                            // Get sessions filtered by current mode (text or video)
+                            const currentMode = this.mode || 'video';
+                            const sessions = await connectToDiscovery(null, currentMode);
                             
                             // Filter out our own session, attempted peers, and get available Codmegle hosts
                             // Only 5-character codes are valid Codmegle sessions
+                            // Also ensure mode matches (text with text, video with video)
                             const availableHosts = sessions.filter(s => {
                                 // Strictly avoid self-connection - check against our current share code
                                 const isNotSelf = s.code !== state.currentShareCode;
@@ -297,7 +300,13 @@
                                 const notAttempted = !attemptedPeers.has(s.code);
                                 // Double-check: make sure code exists and is not empty
                                 const hasValidCode = s.code && s.code.trim().length > 0;
-                                return isNotSelf && isValidCode && notAttempted && hasValidCode;
+                                // Ensure mode matches (text with text, video with video) - strict matching
+                                const sessionMode = s.mode || 'video';
+                                const modeMatches = sessionMode === currentMode;
+                                if (!modeMatches) {
+                                    console.log(`Filtering out session ${s.code}: mode mismatch (session: ${sessionMode}, current: ${currentMode})`);
+                                }
+                                return isNotSelf && isValidCode && notAttempted && hasValidCode && modeMatches;
                             });
                             
                             if (sessions.length > 0 && availableHosts.length < sessions.length) {
@@ -559,9 +568,10 @@
             
             updateOnlineCount: async function() {
                 try {
-                    const sessions = await connectToDiscovery();
+                    // Get all sessions (no mode filter for count)
+                    const allSessions = await connectToDiscovery();
                     // Count only valid Codmegle sessions (5-character codes)
-                    const validSessions = sessions.filter(s => s.code && s.code.length === 5);
+                    const validSessions = allSessions.filter(s => s.code && s.code.length === 5);
                     const count = validSessions.length;
                     this.el.onlineCount.innerText = count > 0 ? count.toLocaleString() + ' online now' : 'Connecting...';
                 } catch (err) {

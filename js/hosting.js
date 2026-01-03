@@ -4,7 +4,7 @@ import { dom } from './dom.js';
 import { startCamera } from './camera.js';
 import { isMobileDevice, isFirefox } from './utils.js';
 import { enterViewerMode } from './viewer.js';
-import { registerSession, unregisterSession, CODMEGLE_PLATFORM_ID } from './discovery.js';
+import { registerSession, unregisterSession, markSessionConnected, markSessionAvailable, CODMEGLE_PLATFORM_ID } from './discovery.js';
 import { showAlert } from './alert.js';
 
 export function stopHosting() {
@@ -15,6 +15,13 @@ export function stopHosting() {
     } catch (err) {
       console.warn("Could not send disconnect message:", err);
     }
+  }
+  
+  // Mark session as available before unregistering (if it was connected)
+  if (state.currentShareCode && state.isConnected) {
+    markSessionAvailable(state.currentShareCode).catch(err => {
+      console.warn("Failed to mark session as available:", err);
+    });
   }
   
   // Unregister from discovery service
@@ -209,6 +216,13 @@ export async function host() {
     state.peer.on("connection", (dataConnection) => {
       console.log("Host received incoming data connection from:", dataConnection.peer);
       
+      // Reject if already connected to another peer
+      if (state.isConnected) {
+        console.log("Already connected, rejecting new data connection from:", dataConnection.peer);
+        dataConnection.close();
+        return;
+      }
+      
       // Use this data connection if we don't have one yet, or if it's from the same peer
       if (!state.dataConnection || state.dataConnection.peer !== dataConnection.peer) {
         state.dataConnection = dataConnection;
@@ -216,6 +230,14 @@ export async function host() {
         dataConnection.on('open', () => {
           state.isConnected = true;
           console.log('Data connection opened (host side - incoming)');
+          
+          // Mark session as connected
+          if (state.currentShareCode) {
+            markSessionConnected(state.currentShareCode).catch(err => {
+              console.warn("Failed to mark session as connected:", err);
+            });
+          }
+          
           if (window.app) {
             window.app.status = 'connected';
             window.app.updateUIState();
@@ -242,6 +264,14 @@ export async function host() {
                 state.dataConnection = null;
               }
               state.isConnected = false;
+              
+              // Mark session as available again for new connections
+              if (state.currentShareCode) {
+                markSessionAvailable(state.currentShareCode).catch(err => {
+                  console.warn("Failed to mark session as available:", err);
+                });
+              }
+              
               if (window.app) {
                 window.app.status = 'disconnected';
                 window.app.updateUIState();
@@ -260,6 +290,14 @@ export async function host() {
             // If connection closes unexpectedly, update status
             if (state.isConnected && window.app) {
               state.isConnected = false;
+              
+              // Mark session as available again
+              if (state.currentShareCode) {
+                markSessionAvailable(state.currentShareCode).catch(err => {
+                  console.warn("Failed to mark session as available:", err);
+                });
+              }
+              
               window.app.status = 'disconnected';
               window.app.updateUIState();
             }
@@ -274,6 +312,13 @@ export async function host() {
     
     state.peer.on("call", (incomingCall) => {
       console.log("Host received incoming call from:", incomingCall.peer);
+      
+      // Reject if already connected to another peer
+      if (state.isConnected || state.call) {
+        console.log("Already connected, rejecting new call from:", incomingCall.peer);
+        incomingCall.close();
+        return;
+      }
       
       if (state.hostStream) {
         // Answer the call with our stream
@@ -291,9 +336,9 @@ export async function host() {
         
         // Mark session as connected in discovery (so it's not available for others)
         if (state.currentShareCode) {
-          // Update session to mark as connected
-          // We'll unregister it to remove from available list
-          unregisterSession(state.currentShareCode);
+          markSessionConnected(state.currentShareCode).catch(err => {
+            console.warn("Failed to mark session as connected:", err);
+          });
         }
         
         // Listen for remote stream from the caller (bidirectional)
@@ -301,6 +346,13 @@ export async function host() {
           console.log("Host received remote stream from caller");
           enterViewerMode(remoteStream);
           state.isConnected = true;
+          
+          // Ensure session is marked as connected
+          if (state.currentShareCode) {
+            markSessionConnected(state.currentShareCode).catch(err => {
+              console.warn("Failed to mark session as connected:", err);
+            });
+          }
           
           // Update UI
           if (window.app) {
@@ -331,7 +383,7 @@ export async function host() {
                   if (window.app && window.app.appendMessage) {
                     window.app.appendMessage(message);
                   }
-                } else if (message.type === 'DISCONNECT') {
+                  } else if (message.type === 'DISCONNECT') {
                   console.log("Received DISCONNECT message from peer");
                   // Clean up connection
                   if (state.call) {
@@ -343,6 +395,14 @@ export async function host() {
                     state.dataConnection = null;
                   }
                   state.isConnected = false;
+                  
+                  // Mark session as available again
+                  if (state.currentShareCode) {
+                    markSessionAvailable(state.currentShareCode).catch(err => {
+                      console.warn("Failed to mark session as available:", err);
+                    });
+                  }
+                  
                   if (window.app) {
                     window.app.status = 'disconnected';
                     window.app.updateUIState();
@@ -365,6 +425,14 @@ export async function host() {
             state.dataConnection.close();
             state.dataConnection = null;
           }
+          
+          // Mark session as available again
+          if (state.currentShareCode) {
+            markSessionAvailable(state.currentShareCode).catch(err => {
+              console.warn("Failed to mark session as available:", err);
+            });
+          }
+          
           if (window.app) {
             window.app.status = 'disconnected';
             window.app.updateUIState();
@@ -388,7 +456,7 @@ export async function host() {
       console.log("Host peer opened with code:", code);
       
       // Register with discovery service
-      registerSession(code).catch(err => {
+      registerSession(code, null, state.mode).catch(err => {
         console.warn("Failed to register session with discovery service:", err);
         // Continue anyway - discovery is optional
       });
@@ -508,6 +576,9 @@ export async function join(idOrLink) {
           enterViewerMode(remoteStream);
           state.isConnected = true;
           
+          // Mark the target session as connected (if we're joining someone else)
+          // Note: The host will mark itself as connected when it receives the call
+          
           if (window.app && window.app.lookingForMatch) {
             window.app.lookingForMatch = false;
             if (window.app.searchInterval) {
@@ -533,6 +604,10 @@ export async function join(idOrLink) {
               state.dataConnection.on('open', () => {
                 state.isConnected = true;
                 console.log('Data connection opened (using existing host peer)');
+                
+                // Mark the target session as connected
+                // Note: The host will mark itself as connected when it receives the call
+                
                 if (window.app) {
                   window.app.status = 'connected';
                   window.app.updateUIState();
@@ -557,6 +632,14 @@ export async function join(idOrLink) {
                       state.dataConnection = null;
                     }
                     state.isConnected = false;
+                    
+                    // Mark the target session as available again
+                    if (peerIdToCall) {
+                      markSessionAvailable(peerIdToCall).catch(err => {
+                        console.warn("Failed to mark session as available:", err);
+                      });
+                    }
+                    
                     if (window.app) {
                       window.app.status = 'disconnected';
                       window.app.updateUIState();
@@ -781,6 +864,14 @@ export async function join(idOrLink) {
                     state.dataConnection = null;
                   }
                   state.isConnected = false;
+                  
+                  // Mark the host session as available again (peer ID is the host's code)
+                  if (dataConnection.peer) {
+                    markSessionAvailable(dataConnection.peer).catch(err => {
+                      console.warn("Failed to mark session as available:", err);
+                    });
+                  }
+                  
                   if (window.app) {
                     window.app.status = 'disconnected';
                     window.app.updateUIState();
@@ -795,6 +886,17 @@ export async function join(idOrLink) {
         console.log('Data connection closed (joiner side)');
         if (state.dataConnection === dataConnection) {
           state.dataConnection = null;
+          // If connection closes unexpectedly, mark session as available
+          if (state.isConnected && dataConnection.peer) {
+            state.isConnected = false;
+            markSessionAvailable(dataConnection.peer).catch(err => {
+              console.warn("Failed to mark session as available:", err);
+            });
+            if (window.app) {
+              window.app.status = 'disconnected';
+              window.app.updateUIState();
+            }
+          }
         }
       });
       
@@ -852,6 +954,12 @@ export async function join(idOrLink) {
           enterViewerMode(remoteStream);
           state.isConnected = true;
           
+          // Mark the target session as connected
+          // Note: The host will mark itself as connected when it receives the call
+          markSessionConnected(peerIdToCall).catch(err => {
+            console.warn("Failed to mark target session as connected:", err);
+          });
+          
           // Stop searching since we're connected
           if (window.app && window.app.lookingForMatch) {
             window.app.lookingForMatch = false;
@@ -884,6 +992,12 @@ export async function join(idOrLink) {
             state.dataConnection.on('open', () => {
               state.isConnected = true;
               console.log('Data connection opened (joiner side - outgoing)');
+              
+              // Mark the target session as connected
+              markSessionConnected(peerIdToCall).catch(err => {
+                console.warn("Failed to mark target session as connected:", err);
+              });
+              
               if (window.app) {
                 window.app.status = 'connected';
                 window.app.updateUIState();
@@ -910,6 +1024,14 @@ export async function join(idOrLink) {
                     state.dataConnection = null;
                   }
                   state.isConnected = false;
+                  
+                  // Mark the target session as available again
+                  if (peerIdToCall) {
+                    markSessionAvailable(peerIdToCall).catch(err => {
+                      console.warn("Failed to mark session as available:", err);
+                    });
+                  }
+                  
                   if (window.app) {
                     window.app.status = 'disconnected';
                     window.app.updateUIState();
@@ -934,6 +1056,14 @@ export async function join(idOrLink) {
             state.dataConnection = null;
           }
           state.isConnected = false;
+          
+          // Mark session as available again
+          if (peerIdToCall) {
+            markSessionAvailable(peerIdToCall).catch(err => {
+              console.warn("Failed to mark session as available:", err);
+            });
+          }
+          
           setTimeout(() => {
             showAlert("Connection to host lost", 'error');
             if (window.app && window.app.disconnectChat) {
@@ -1081,6 +1211,13 @@ export function disconnect() {
   if (state.call) {
     state.call.close();
     state.call = null;
+  }
+  
+  // Mark session as available before unregistering (if it was connected)
+  if (state.currentShareCode && state.isConnected) {
+    markSessionAvailable(state.currentShareCode).catch(err => {
+      console.warn("Failed to mark session as available:", err);
+    });
   }
   
   // Destroy peer to fully clean up

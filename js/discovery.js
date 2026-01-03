@@ -124,9 +124,10 @@ function handleDiscoveryMessage(message, dataConnection) {
         timestamp: message.timestamp || Date.now(),
         name: message.name,
         platform: message.platform || CODMEGLE_PLATFORM_ID,
+        mode: message.mode || 'video', // Store mode: 'text' or 'video'
         connected: false // Track if this session is already connected
       });
-      console.log('Registered Codmegle session:', message.code);
+      console.log('Registered Codmegle session:', message.code, 'mode:', message.mode || 'video');
       
       // Send confirmation
       dataConnection.send(JSON.stringify({
@@ -134,6 +135,24 @@ function handleDiscoveryMessage(message, dataConnection) {
         code: message.code,
         success: true
       }));
+      break;
+
+    case 'mark_connected':
+      // Mark a session as connected
+      const connectedSession = sessionRegistry.get(message.code);
+      if (connectedSession) {
+        connectedSession.connected = true;
+        console.log('Marked session as connected:', message.code);
+      }
+      break;
+
+    case 'mark_available':
+      // Mark a session as available
+      const availableSession = sessionRegistry.get(message.code);
+      if (availableSession) {
+        availableSession.connected = false;
+        console.log('Marked session as available:', message.code);
+      }
       break;
 
     case 'unregister':
@@ -148,18 +167,25 @@ function handleDiscoveryMessage(message, dataConnection) {
       const isCodmegleRequest = requestPlatform === CODMEGLE_PLATFORM_ID;
       
       // Send list of active sessions (only Codmegle ones, available, and not connected)
+      // Filter by mode if requested
+      const requestMode = message.mode || null;
       const sessions = Array.from(sessionRegistry.values())
         .filter(session => {
           const isRecent = Date.now() - session.timestamp < SESSION_TIMEOUT;
           const isAvailable = !session.connected;
           const isCodmegle = (session.platform === CODMEGLE_PLATFORM_ID) || (!session.platform && isCodmegleRequest);
-          // Only return Codmegle sessions if request is from Codmegle
-          return isRecent && isAvailable && isCodmegle;
+          // Strict mode matching - if requestMode is specified, session must have matching mode
+          // Default to 'video' only if mode is not specified in request
+          const sessionMode = session.mode || 'video';
+          const matchingMode = !requestMode || sessionMode === requestMode;
+          // Only return Codmegle sessions if request is from Codmegle, and matching mode
+          return isRecent && isAvailable && isCodmegle && matchingMode;
         })
         .map(session => ({
           code: session.code,
           timestamp: session.timestamp,
-          name: session.name
+          name: session.name,
+          mode: session.mode || 'video' // Include mode in response
         }));
       
       dataConnection.send(JSON.stringify({
@@ -178,7 +204,8 @@ function handleDiscoveryMessage(message, dataConnection) {
 let activeDiscoveryConnections = new Set();
 
 // Connect to discovery peer as client
-export function connectToDiscovery(onSessionsReceived) {
+// mode: optional filter - 'text' or 'video' to only get sessions of that mode
+export function connectToDiscovery(onSessionsReceived, mode) {
   return new Promise((resolve, reject) => {
     // First, try to start as host (in case no one else is)
     startDiscoveryHost();
@@ -187,17 +214,22 @@ export function connectToDiscovery(onSessionsReceived) {
     setTimeout(() => {
       if (isDiscoveryHost) {
         // We're the host, return our registry (only Codmegle available sessions)
+        // Filter by mode if provided
         const sessions = Array.from(sessionRegistry.values())
           .filter(session => {
             const isRecent = Date.now() - session.timestamp < SESSION_TIMEOUT;
             const isAvailable = !session.connected;
             const isCodmegle = session.platform === CODMEGLE_PLATFORM_ID;
-            return isRecent && isAvailable && isCodmegle;
+            // Strict mode matching - if mode is specified, session must have matching mode
+            const sessionMode = session.mode || 'video';
+            const matchingMode = !mode || sessionMode === mode;
+            return isRecent && isAvailable && isCodmegle && matchingMode;
           })
           .map(session => ({
             code: session.code,
             timestamp: session.timestamp,
-            name: session.name
+            name: session.name,
+            mode: session.mode || 'video'
           }));
         
         if (onSessionsReceived) {
@@ -237,11 +269,15 @@ export function connectToDiscovery(onSessionsReceived) {
             console.log('Connected to discovery peer');
             discoveryDataConnection = dataConnection;
 
-            // Request session list with Codmegle platform identifier
-            dataConnection.send(JSON.stringify({ 
+            // Request session list with Codmegle platform identifier and mode
+            const listRequest = { 
               type: 'list',
               platform: CODMEGLE_PLATFORM_ID
-            }));
+            };
+            if (mode) {
+              listRequest.mode = mode; // Include mode to filter
+            }
+            dataConnection.send(JSON.stringify(listRequest));
 
             // Listen for responses
             dataConnection.on('data', (data) => {
@@ -249,10 +285,15 @@ export function connectToDiscovery(onSessionsReceived) {
                 const message = JSON.parse(data);
                 if (message.type === 'list_response') {
                   console.log('Received session list:', message.sessions.length, 'sessions');
+                  // Add mode to each session if not present
+                  const sessionsWithMode = message.sessions.map(s => ({
+                    ...s,
+                    mode: s.mode || 'video'
+                  }));
                   if (onSessionsReceived) {
-                    onSessionsReceived(message.sessions);
+                    onSessionsReceived(sessionsWithMode);
                   }
-                  resolve(message.sessions);
+                  resolve(sessionsWithMode);
                   
                   // Close connection after receiving list
                   setTimeout(() => {
@@ -309,7 +350,7 @@ export function connectToDiscovery(onSessionsReceived) {
 }
 
 // Register a session with discovery service
-export function registerSession(code, name) {
+export function registerSession(code, name, mode) {
   if (isDiscoveryHost) {
     // We're the host, add directly with Codmegle platform identifier
     sessionRegistry.set(code, {
@@ -317,9 +358,10 @@ export function registerSession(code, name) {
       timestamp: Date.now(),
       name: name,
       platform: CODMEGLE_PLATFORM_ID,
+      mode: mode || 'video', // Store mode: 'text' or 'video'
       connected: false
     });
-    console.log('Registered Codmegle session locally:', code);
+    console.log('Registered Codmegle session locally:', code, 'mode:', mode || 'video');
     return Promise.resolve();
   }
 
@@ -342,13 +384,14 @@ export function registerSession(code, name) {
         });
 
         dataConnection.on('open', () => {
-          // Send registration with Codmegle platform identifier
+          // Send registration with Codmegle platform identifier and mode
           dataConnection.send(JSON.stringify({
             type: 'register',
             code: code,
             timestamp: Date.now(),
             name: name,
-            platform: CODMEGLE_PLATFORM_ID
+            platform: CODMEGLE_PLATFORM_ID,
+            mode: mode || 'video' // Include mode in registration
           }));
 
           // Wait for acknowledgment
@@ -399,6 +442,116 @@ export function registerSession(code, name) {
       } else {
         reject(err);
       }
+    });
+  });
+}
+
+// Mark a session as connected (so it won't be available for new connections)
+export function markSessionConnected(code) {
+  if (isDiscoveryHost) {
+    // We're the host, update directly
+    const session = sessionRegistry.get(code);
+    if (session) {
+      session.connected = true;
+      console.log('Marked session as connected:', code);
+    }
+    return Promise.resolve();
+  }
+
+  // Connect and mark as connected
+  return new Promise((resolve, reject) => {
+    const clientPeer = new Peer({
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+
+    clientPeer.on('open', () => {
+      try {
+        const dataConnection = clientPeer.connect(DISCOVERY_PEER_ID, {
+          reliable: true
+        });
+
+        dataConnection.on('open', () => {
+          dataConnection.send(JSON.stringify({
+            type: 'mark_connected',
+            code: code
+          }));
+          
+          setTimeout(() => {
+            dataConnection.close();
+            clientPeer.destroy();
+            resolve();
+          }, 500);
+        });
+      } catch (err) {
+        clientPeer.destroy();
+        reject(err);
+      }
+    });
+
+    clientPeer.on('error', () => {
+      clientPeer.destroy();
+      resolve(); // Silently fail, don't block
+    });
+  });
+}
+
+// Mark a session as available (so it can accept new connections)
+export function markSessionAvailable(code) {
+  if (isDiscoveryHost) {
+    // We're the host, update directly
+    const session = sessionRegistry.get(code);
+    if (session) {
+      session.connected = false;
+      console.log('Marked session as available:', code);
+    }
+    return Promise.resolve();
+  }
+
+  // Connect and mark as available
+  return new Promise((resolve, reject) => {
+    const clientPeer = new Peer({
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+
+    clientPeer.on('open', () => {
+      try {
+        const dataConnection = clientPeer.connect(DISCOVERY_PEER_ID, {
+          reliable: true
+        });
+
+        dataConnection.on('open', () => {
+          dataConnection.send(JSON.stringify({
+            type: 'mark_available',
+            code: code
+          }));
+          
+          setTimeout(() => {
+            dataConnection.close();
+            clientPeer.destroy();
+            resolve();
+          }, 500);
+        });
+      } catch (err) {
+        clientPeer.destroy();
+        reject(err);
+      }
+    });
+
+    clientPeer.on('error', () => {
+      clientPeer.destroy();
+      resolve(); // Silently fail, don't block
     });
   });
 }
