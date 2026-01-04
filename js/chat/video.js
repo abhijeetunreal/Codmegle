@@ -144,48 +144,64 @@ export function setupVideoMethods(app) {
     app.updateMediaButtonStates = function() {
         // Update mute button with better visual feedback
         if (this.el.btnMute) {
-            const icon = this.el.btnMute.querySelector('i');
-            if (icon) {
-                // Remove old icon and create new one for better visual update
-                const iconName = this.isMuted ? 'mic-off' : 'mic';
-                icon.setAttribute('data-lucide', iconName);
-                
-                // Update button styling with clear visual feedback
-                if (this.isMuted) {
-                    // Muted state: red styling
-                    this.el.btnMute.classList.remove('border-gray-300', 'text-gray-700', 'hover:border-blue-400', 'hover:bg-blue-50', 'bg-white');
-                    this.el.btnMute.classList.add('border-red-500', 'bg-red-100', 'text-red-600', 'hover:border-red-600', 'hover:bg-red-200');
-                } else {
-                    // Unmuted state: normal styling
-                    this.el.btnMute.classList.remove('border-red-500', 'bg-red-100', 'text-red-600', 'hover:border-red-600', 'hover:bg-red-200');
-                    this.el.btnMute.classList.add('border-gray-300', 'text-gray-700', 'hover:border-blue-400', 'hover:bg-blue-50', 'bg-white');
-                }
-                
-                // Force icon refresh
+            // Remove ALL existing icon elements (i tags and any SVG children)
+            const allIcons = this.el.btnMute.querySelectorAll('i, svg');
+            allIcons.forEach(icon => icon.remove());
+            
+            // Create new icon element with correct state
+            const iconName = this.isMuted ? 'mic-off' : 'mic';
+            const newIcon = document.createElement('i');
+            newIcon.setAttribute('data-lucide', iconName);
+            newIcon.className = 'w-4.5 h-4.5';
+            
+            // Append new icon to button
+            this.el.btnMute.appendChild(newIcon);
+            
+            // Update button styling with clear visual feedback
+            if (this.isMuted) {
+                // Muted state: red styling
+                this.el.btnMute.classList.remove('border-gray-300', 'text-gray-700', 'hover:border-blue-400', 'hover:bg-blue-50', 'bg-white');
+                this.el.btnMute.classList.add('border-red-500', 'bg-red-100', 'text-red-600', 'hover:border-red-600', 'hover:bg-red-200');
+            } else {
+                // Unmuted state: normal styling
+                this.el.btnMute.classList.remove('border-red-500', 'bg-red-100', 'text-red-600', 'hover:border-red-600', 'hover:bg-red-200');
+                this.el.btnMute.classList.add('border-gray-300', 'text-gray-700', 'hover:border-blue-400', 'hover:bg-blue-50', 'bg-white');
+            }
+            
+            // Render the new icon
+            if (window.lucide) {
                 lucide.createIcons();
             }
         }
         
         // Update video toggle button with better visual feedback
         if (this.el.btnVideoToggle) {
-            const icon = this.el.btnVideoToggle.querySelector('i');
-            if (icon) {
-                // Remove old icon and create new one for better visual update
-                const iconName = this.isVideoEnabled ? 'video' : 'video-off';
-                icon.setAttribute('data-lucide', iconName);
-                
-                // Update button styling with clear visual feedback
-                if (!this.isVideoEnabled) {
-                    // Video off state: red styling
-                    this.el.btnVideoToggle.classList.remove('border-gray-300', 'text-gray-700', 'hover:border-blue-400', 'hover:bg-blue-50', 'bg-white');
-                    this.el.btnVideoToggle.classList.add('border-red-500', 'bg-red-100', 'text-red-600', 'hover:border-red-600', 'hover:bg-red-200');
-                } else {
-                    // Video on state: normal styling
-                    this.el.btnVideoToggle.classList.remove('border-red-500', 'bg-red-100', 'text-red-600', 'hover:border-red-600', 'hover:bg-red-200');
-                    this.el.btnVideoToggle.classList.add('border-gray-300', 'text-gray-700', 'hover:border-blue-400', 'hover:bg-blue-50', 'bg-white');
-                }
-                
-                // Force icon refresh
+            // Remove ALL existing icon elements (i tags and any SVG children)
+            const allIcons = this.el.btnVideoToggle.querySelectorAll('i, svg');
+            allIcons.forEach(icon => icon.remove());
+            
+            // Create new icon element with correct state
+            const iconName = this.isVideoEnabled ? 'video' : 'video-off';
+            const newIcon = document.createElement('i');
+            newIcon.setAttribute('data-lucide', iconName);
+            newIcon.className = 'w-4.5 h-4.5';
+            
+            // Append new icon to button
+            this.el.btnVideoToggle.appendChild(newIcon);
+            
+            // Update button styling with clear visual feedback
+            if (!this.isVideoEnabled) {
+                // Video off state: red styling
+                this.el.btnVideoToggle.classList.remove('border-gray-300', 'text-gray-700', 'hover:border-blue-400', 'hover:bg-blue-50', 'bg-white');
+                this.el.btnVideoToggle.classList.add('border-red-500', 'bg-red-100', 'text-red-600', 'hover:border-red-600', 'hover:bg-red-200');
+            } else {
+                // Video on state: normal styling
+                this.el.btnVideoToggle.classList.remove('border-red-500', 'bg-red-100', 'text-red-600', 'hover:border-red-600', 'hover:bg-red-200');
+                this.el.btnVideoToggle.classList.add('border-gray-300', 'text-gray-700', 'hover:border-blue-400', 'hover:bg-blue-50', 'bg-white');
+            }
+            
+            // Render the new icon
+            if (window.lucide) {
                 lucide.createIcons();
             }
         }
