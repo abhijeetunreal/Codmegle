@@ -100,6 +100,9 @@
                         <button id="btn-video-toggle" onclick="app.toggleVideo()" class="h-9 min-h-[36px] w-9 min-w-[36px] sm:h-10 sm:w-10 flex items-center justify-center rounded-lg shadow-sm transition-all bg-white border-2 border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-700 active:translate-y-0.5 flex-shrink-0 hidden touch-target header-control-btn">
                             <i data-lucide="video" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
                         </button>
+                        <button id="btn-settings" onclick="app.showSettingsModal()" class="h-9 min-h-[36px] w-9 min-w-[36px] sm:h-10 sm:w-10 flex items-center justify-center rounded-lg shadow-sm transition-all bg-white border-2 border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-700 active:translate-y-0.5 flex-shrink-0 hidden touch-target header-control-btn" title="Device Settings">
+                            <i data-lucide="settings" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+                        </button>
                     </div>
                     
                     <div class="flex items-center gap-2 flex-shrink-0 ml-1 sm:ml-2">
@@ -192,6 +195,60 @@
                         <i data-lucide="clock" class="profile-info-icon"></i>
                         <span class="profile-info-label">Joined:</span>
                         <span class="profile-info-value" id="profile-joined">Just now</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal-overlay" class="profile-modal-overlay hidden" onclick="app.closeSettingsModal(event)">
+            <div class="profile-modal settings-modal" onclick="event.stopPropagation()">
+                <div class="profile-header">
+                    <button class="profile-close-btn" onclick="app.closeSettingsModal()">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                    <div class="profile-avatar bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                        <i data-lucide="settings" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold">Device Settings</h2>
+                    <p class="text-blue-100 text-sm mt-1">Select your camera and microphone</p>
+                </div>
+                <div class="settings-body">
+                    <div class="device-select-group">
+                        <div class="device-select-header">
+                            <div class="device-icon-wrapper">
+                                <i data-lucide="video" class="device-icon"></i>
+                            </div>
+                            <div class="device-label-wrapper">
+                                <label class="device-label">Camera</label>
+                                <span class="device-hint">Choose your video input device</span>
+                            </div>
+                        </div>
+                        <select id="settings-camera-select" class="device-select">
+                            <option value="">Loading cameras...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="device-select-group">
+                        <div class="device-select-header">
+                            <div class="device-icon-wrapper">
+                                <i data-lucide="mic" class="device-icon"></i>
+                            </div>
+                            <div class="device-label-wrapper">
+                                <label class="device-label">Microphone</label>
+                                <span class="device-hint">Choose your audio input device</span>
+                            </div>
+                        </div>
+                        <select id="settings-audio-select" class="device-select">
+                            <option value="">Loading microphones...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="settings-actions">
+                        <button onclick="app.applyDeviceSettings()" class="settings-apply-btn">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            <span>Apply Settings</span>
+                        </button>
                     </div>
                 </div>
             </div>

@@ -40,7 +40,11 @@ export function createApp() {
             chatPanel: document.querySelector('.desktop-chat-panel'),
             profileBtn: document.getElementById('profile-btn'),
             profileModal: document.getElementById('profile-modal-overlay'),
-            strangerStatus: document.getElementById('stranger-status')
+            strangerStatus: document.getElementById('stranger-status'),
+            btnSettings: document.getElementById('btn-settings'),
+            settingsModal: document.getElementById('settings-modal-overlay'),
+            settingsCameraSelect: document.getElementById('settings-camera-select'),
+            settingsAudioSelect: document.getElementById('settings-audio-select')
         },
 
         init: async function() {

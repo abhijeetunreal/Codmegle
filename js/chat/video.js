@@ -1,5 +1,5 @@
 // Video and camera controls
-import { startCamera, stopCamera } from '../camera.js';
+import { startCamera, stopCamera, switchDevice as switchCameraDevice, getCurrentStream } from '../camera.js';
 import { state } from '../state.js';
 import { dom } from '../dom.js';
 
@@ -209,6 +209,47 @@ export function setupVideoMethods(app) {
             if (wasHidden && !this.isVideoEnabled && window.lucide) {
                 lucide.createIcons();
             }
+        }
+    };
+
+    app.switchDevice = async function(videoDeviceId, audioDeviceId) {
+        try {
+            // Switch device in camera module
+            const newStream = await switchCameraDevice(videoDeviceId, audioDeviceId);
+            
+            // Update localStream
+            this.localStream = newStream;
+            
+            // Update local video element
+            if (this.el.localVideo) {
+                this.el.localVideo.srcObject = newStream;
+                try {
+                    await this.el.localVideo.play();
+                } catch (playErr) {
+                    console.warn("Video play error after device switch:", playErr);
+                }
+            }
+            
+            // Update state.hostStream if it exists - stop old tracks and add new ones
+            if (state.hostStream) {
+                // Stop old tracks
+                state.hostStream.getTracks().forEach(track => track.stop());
+                
+                // Add new tracks
+                newStream.getTracks().forEach(track => {
+                    state.hostStream.addTrack(track);
+                });
+            }
+            
+            // dom.camera is already updated in switchCameraDevice, but ensure it's set
+            if (dom.camera && dom.camera.srcObject !== newStream) {
+                dom.camera.srcObject = newStream;
+            }
+            
+            return newStream;
+        } catch (err) {
+            console.error("Device switch error:", err);
+            throw err;
         }
     };
 }

@@ -1,5 +1,6 @@
 // UI management and interactions
 import { state } from '../state.js';
+import { showAlert } from '../alert.js';
 
 export function setupUIMethods(app) {
     app.updateUIState = function() {
@@ -23,6 +24,9 @@ export function setupUIMethods(app) {
         }
         if (this.el.btnVideoToggle) {
             this.el.btnVideoToggle.classList.toggle('hidden', !showMediaButtons);
+        }
+        if (this.el.btnSettings) {
+            this.el.btnSettings.classList.toggle('hidden', !showMediaButtons);
         }
         
         // Update media button states
@@ -393,6 +397,110 @@ export function setupUIMethods(app) {
                 updateVideoMode();
             }, 200);
         });
+    };
+    
+    app.showSettingsModal = async function() {
+        if (!this.el.settingsModal || !this.el.settingsCameraSelect || !this.el.settingsAudioSelect) {
+            console.error("Settings modal elements not found");
+            return;
+        }
+        
+        // Show modal - use 'active' class like profile modal
+        this.el.settingsModal.classList.remove('hidden');
+        this.el.settingsModal.classList.add('active');
+        
+        // Populate device selects
+        await this.populateDeviceSelects();
+        
+        // Initialize icons
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    };
+    
+    app.closeSettingsModal = function(event) {
+        // Only close if clicking on overlay, not modal content
+        if (event && event.target !== event.currentTarget && !event.target.closest('.profile-close-btn')) {
+            return;
+        }
+        
+        if (this.el.settingsModal) {
+            this.el.settingsModal.classList.remove('active');
+            // Keep hidden class for initial state
+            this.el.settingsModal.classList.add('hidden');
+        }
+    };
+    
+    app.populateDeviceSelects = async function() {
+        if (!this.el.settingsCameraSelect || !this.el.settingsAudioSelect) {
+            return;
+        }
+        
+        // Import enumerateDevices and getSavedDevicePreferences
+        const { enumerateDevices, getSavedDevicePreferences } = await import('../camera.js');
+        
+        // Get saved preferences
+        const prefs = getSavedDevicePreferences();
+        
+        // Enumerate devices
+        const { cameras, microphones } = await enumerateDevices();
+        
+        // Populate camera select
+        this.el.settingsCameraSelect.innerHTML = '<option value="">Default Camera</option>';
+        cameras.forEach(camera => {
+            const option = document.createElement('option');
+            option.value = camera.deviceId;
+            option.textContent = camera.label;
+            if (camera.deviceId === prefs.cameraId) {
+                option.selected = true;
+            }
+            this.el.settingsCameraSelect.appendChild(option);
+        });
+        
+        // Populate audio select
+        this.el.settingsAudioSelect.innerHTML = '<option value="">Default Microphone</option>';
+        microphones.forEach(mic => {
+            const option = document.createElement('option');
+            option.value = mic.deviceId;
+            option.textContent = mic.label;
+            if (mic.deviceId === prefs.audioId) {
+                option.selected = true;
+            }
+            this.el.settingsAudioSelect.appendChild(option);
+        });
+    };
+    
+    app.applyDeviceSettings = async function() {
+        if (!this.el.settingsCameraSelect || !this.el.settingsAudioSelect) {
+            return;
+        }
+        
+        const selectedCameraId = this.el.settingsCameraSelect.value || null;
+        const selectedAudioId = this.el.settingsAudioSelect.value || null;
+        
+        // Import saveDevicePreferences and switchDevice
+        const { saveDevicePreferences, switchDevice, getCurrentStream } = await import('../camera.js');
+        
+        // Save preferences
+        saveDevicePreferences(selectedCameraId, selectedAudioId);
+        
+        // If camera is active, switch devices
+        if (this.mode === 'video' && (this.localStream || getCurrentStream())) {
+            try {
+                await this.switchDevice(selectedCameraId, selectedAudioId);
+                // Show success feedback
+                showAlert("Device settings applied successfully", 'success');
+            } catch (err) {
+                console.error("Failed to switch devices:", err);
+                showAlert("Failed to switch devices. Settings saved for next session.", 'warning');
+            }
+        } else {
+            // Just save preferences for next time
+            showAlert("Settings saved", 'success');
+        }
+        
+        // Close modal
+        this.closeSettingsModal();
     };
 }
 
