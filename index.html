@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="css/chat.css">
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -33,25 +34,19 @@
                 margin: 0 auto;
             }
         }
-        /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 10px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 5px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* Scrollbar styling - now handled by chat.css */
         .scale-x-flip { transform: scaleX(-1); }
         
-        /* Custom gradient backgrounds */
+        /* Custom gradient backgrounds - using CSS variables from chat.css */
         .bg-gradient-primary {
-            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-        }
-        .bg-gradient-welcome {
-            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%);
+            background: var(--button-primary-bg);
         }
         .bg-gradient-message-you {
-            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            background: var(--message-you-bg);
         }
         .bg-gradient-message-stranger {
-            background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+            background: var(--message-stranger-bg);
+            border: 1px solid var(--message-stranger-border);
         }
         
         /* Smooth transitions */
@@ -96,43 +91,69 @@
         .pulse-slow {
             animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+        
+        /* Prevent clipping issues */
+        #welcome-screen {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        
+        #welcome-screen > div {
+            width: 100%;
+            max-width: min(100% - 2rem, 48rem);
+            box-sizing: border-box;
+        }
+        
+        #welcome-screen h1,
+        #welcome-screen p,
+        #welcome-screen ul,
+        #welcome-screen li {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
     </style>
 </head>
-<body class="bg-gradient-welcome h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden body-theme">
 
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 p-3 sm:p-4 flex justify-between items-center shadow-md h-14 sm:h-16 shrink-0 z-10 backdrop-blur-sm bg-white/95">
+    <header class="header-main border-b p-2.5 sm:p-3 md:p-4 flex justify-between items-center shadow-md header-responsive shrink-0 z-10 backdrop-blur-sm">
         <div class="flex items-center select-none cursor-pointer group" onclick="window.location.reload()">
-            <span class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-800 group-hover:text-blue-600 transition-colors">Cod</span>
-            <span class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-orange-500 to-orange-600 px-1.5 sm:px-2 py-0.5 transform -rotate-2 shadow-lg inline-block ml-0.5 sm:ml-1 rounded-md group-hover:shadow-xl transition-shadow">megle</span>
+            <span class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight header-logo-text group-hover:text-blue-600 transition-colors">Cod</span>
+            <span class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-orange-500 to-orange-600 px-1 sm:px-1.5 md:px-2 py-0.5 transform -rotate-2 shadow-lg inline-block ml-0.5 sm:ml-1 rounded-md group-hover:shadow-xl transition-shadow">megle</span>
         </div>
-        <div class="flex items-center gap-1.5 sm:gap-2">
+        <div class="flex items-center gap-2 sm:gap-2.5 md:gap-3">
+            <button id="theme-toggle" onclick="app.toggleTheme()" class="theme-toggle-btn flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all active:scale-95" title="Toggle theme">
+                <i data-lucide="sun" class="w-5 h-5 theme-icon-light"></i>
+                <i data-lucide="moon" class="w-5 h-5 theme-icon-dark hidden"></i>
+            </button>
             <div class="h-1.5 w-1.5 sm:h-2 sm:w-2 bg-green-500 rounded-full pulse-slow"></div>
-            <div class="text-xs sm:text-sm md:text-base text-gray-600 font-semibold px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-100 rounded-full whitespace-nowrap" id="online-count">
+            <div class="text-xs sm:text-sm md:text-base header-online-text font-semibold px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 md:py-1.5 header-online-bg rounded-full whitespace-nowrap header-online-count" id="online-count">
                 Connecting...
             </div>
         </div>
     </header>
 
     <!-- Welcome Screen -->
-    <div id="welcome-screen" class="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-y-auto">
-        <div class="bg-white p-6 sm:p-8 md:p-10 lg:p-12 rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full border border-gray-100 transform transition-all duration-300 hover:shadow-3xl mx-2 sm:mx-4">
-            <div class="mb-6 sm:mb-8">
-                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-3 sm:mb-4 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 bg-clip-text text-transparent px-2">
+    <div id="welcome-screen" class="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-y-auto" style="overflow-x: hidden; width: 100%;">
+        <div class="p-6 sm:p-8 md:p-10 lg:p-12 rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full transform transition-all duration-300 hover:shadow-3xl mx-2 sm:mx-4" style="background-color: var(--bg-primary); border: 1px solid var(--border-primary); box-sizing: border-box; max-width: min(100% - 2rem, 48rem);">
+            <div class="mb-6 sm:mb-8" style="width: 100%; box-sizing: border-box;">
+                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-3 sm:mb-4 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 bg-clip-text text-transparent" style="word-wrap: break-word; overflow-wrap: break-word; padding: 9px 1rem; box-sizing: border-box;">
                     Talk to strangers!
                 </h1>
-                <p class="text-gray-600 mb-2 text-base sm:text-lg md:text-xl leading-relaxed max-w-2xl mx-auto px-2">
+                <p class="mb-2 text-base sm:text-lg md:text-xl leading-relaxed max-w-2xl mx-auto" style="color: var(--text-secondary); word-wrap: break-word; overflow-wrap: break-word; padding: 0 0.5rem; box-sizing: border-box;">
                     Codmegle is a great place to meet new friends. When you use Codmegle, 
                     we pick someone else at random and let you talk one-on-one.
                 </p>
             </div>
             
-            <div class="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500 p-4 sm:p-5 mb-6 sm:mb-8 md:mb-10 text-left rounded-r-lg shadow-sm">
-                <div class="flex items-start gap-3">
-                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0"></i>
-                    <div>
-                        <p class="font-bold text-amber-900 mb-2 text-base">Terms of Service:</p>
-                        <ul class="list-disc list-inside space-y-1.5 text-sm text-amber-800">
+            <div class="border-l-4 p-4 sm:p-5 mb-6 sm:mb-8 md:mb-10 text-left rounded-r-lg shadow-sm" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(234, 179, 8, 0.1) 100%); border-color: #f59e0b; width: 100%; box-sizing: border-box;">
+                <div class="flex items-start gap-3" style="width: 100%; box-sizing: border-box;">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 mt-0.5 flex-shrink-0" style="color: #f59e0b;"></i>
+                    <div class="flex-1" style="min-width: 0; box-sizing: border-box;">
+                        <p class="font-bold mb-2 text-base" style="color: var(--text-primary); word-wrap: break-word; overflow-wrap: break-word;">Terms of Service:</p>
+                        <ul class="list-disc list-inside space-y-1.5 text-sm" style="color: var(--text-secondary); word-wrap: break-word; overflow-wrap: break-word;">
                             <li>You must be 18+ to use this site.</li>
                             <li>Do not transmit nudity, sexually explicit content, or illegal material.</li>
                             <li>Be respectful to others.</li>
@@ -142,54 +163,54 @@
                 </div>
             </div>
 
-            <div class="space-y-4 sm:space-y-6">
-                <div class="text-gray-700 font-semibold mb-3 sm:mb-4 text-base sm:text-lg">Start chatting:</div>
-                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2">
-                    <button onclick="app.startChat('text')" class="btn-primary w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-white border-2 border-gray-300 text-gray-700 font-bold text-base sm:text-lg rounded-xl hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 shadow-md active:translate-y-0.5 flex items-center justify-center gap-2 transition-all">
-                        <i data-lucide="message-square" class="w-5 h-5"></i>
-                        <span>Text only</span>
+            <div class="space-y-4 sm:space-y-6" style="width: 100%; box-sizing: border-box;">
+                <div class="font-semibold mb-3 sm:mb-4 text-base sm:text-lg" style="color: var(--text-primary); word-wrap: break-word; overflow-wrap: break-word;">Start chatting:</div>
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center" style="width: 100%; box-sizing: border-box; padding: 0 0.5rem;">
+                    <button onclick="app.startChat('text')" class="btn-primary w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 border-2 font-bold text-base sm:text-lg rounded-xl shadow-md active:translate-y-0.5 flex items-center justify-center gap-2 transition-all chat-header-btn" style="background-color: var(--button-secondary-bg); border-color: var(--button-secondary-border); color: var(--text-primary); box-sizing: border-box; flex-shrink: 1;">
+                        <i data-lucide="message-square" class="w-5 h-5 flex-shrink-0"></i>
+                        <span class="whitespace-nowrap">Text only</span>
                     </button>
-                    <button onclick="app.startChat('video')" class="btn-primary w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-gradient-primary text-white font-bold text-base sm:text-lg rounded-xl hover:shadow-xl shadow-lg active:translate-y-0.5 flex items-center justify-center gap-2 transition-all">
-                        <i data-lucide="video" class="w-5 h-5"></i>
-                        <span>Video</span>
+                    <button onclick="app.startChat('video')" class="btn-primary w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-gradient-primary text-white font-bold text-base sm:text-lg rounded-xl hover:shadow-xl shadow-lg active:translate-y-0.5 flex items-center justify-center gap-2 transition-all" style="box-sizing: border-box; flex-shrink: 1;">
+                        <i data-lucide="video" class="w-5 h-5 flex-shrink-0"></i>
+                        <span class="whitespace-nowrap">Video</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Chat Screen -->
-    <div id="chat-screen" class="hidden flex-1 flex flex-col h-full overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+        <!-- Chat Screen -->
+        <div id="chat-screen" class="hidden flex-1 flex flex-col h-full overflow-hidden" style="background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);">
         
         <!-- Video Container -->
-        <div id="video-container" class="hidden h-48 sm:h-64 md:h-80 lg:h-96 bg-gradient-to-br from-gray-900 to-black relative flex justify-center items-center shrink-0 border-b-2 border-gray-800 shadow-2xl">
+        <div id="video-container" class="hidden h-48 sm:h-64 md:h-80 lg:h-96 relative flex justify-center items-center shrink-0 border-b-2 shadow-2xl" style="background: var(--video-bg); border-color: var(--border-primary);">
             <div class="w-full h-full relative">
                 <!-- Remote Video Placeholder -->
-                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black" id="remote-video-container">
+                <div class="w-full h-full flex items-center justify-center" id="remote-video-container" style="background: var(--video-bg);">
                     <div class="text-center">
                         <div class="pulse-slow mb-4">
-                            <div class="mx-auto w-16 h-16 bg-blue-600/20 rounded-full flex items-center justify-center">
-                                <i data-lucide="video" class="text-blue-400 w-8 h-8"></i>
+                            <div class="mx-auto w-16 h-16 rounded-full flex items-center justify-center" style="background: rgba(59, 130, 246, 0.15); backdrop-filter: blur(10px);">
+                                <i data-lucide="video" class="w-8 h-8" style="color: var(--accent-primary);"></i>
                             </div>
                         </div>
-                        <p class="text-gray-400 text-sm font-medium">Waiting for remote video...</p>
+                        <p class="text-sm font-medium" style="color: var(--text-secondary);">Waiting for remote video...</p>
                     </div>
                 </div>
-                <div id="video-waiting-msg" class="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm text-gray-300 hidden">
+                <div id="video-waiting-msg" class="absolute inset-0 flex items-center justify-center backdrop-blur-sm hidden" style="background: var(--video-overlay);">
                     <div class="text-center">
                         <div class="pulse-slow mb-3">
-                            <div class="mx-auto w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
-                                <i data-lucide="users" class="text-blue-400 w-6 h-6"></i>
+                            <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(59, 130, 246, 0.15); backdrop-filter: blur(10px);">
+                                <i data-lucide="users" class="w-6 h-6" style="color: var(--accent-primary);"></i>
                             </div>
                         </div>
-                        <p class="font-semibold">Waiting for partner...</p>
+                        <p class="font-semibold" style="color: var(--text-inverse);">Waiting for partner...</p>
                     </div>
                 </div>
 
                 <!-- Local Video -->
-                <div class="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-24 h-18 sm:w-32 sm:h-24 md:w-40 md:h-30 lg:w-48 lg:h-36 bg-gray-800 border-2 sm:border-4 border-white shadow-2xl overflow-hidden rounded-lg sm:rounded-xl ring-1 sm:ring-2 ring-blue-500/50">
+                <div class="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-24 h-18 sm:w-32 sm:h-24 md:w-40 md:h-30 lg:w-48 lg:h-36 border-2 sm:border-4 shadow-2xl overflow-hidden rounded-lg sm:rounded-xl ring-1 sm:ring-2" style="background-color: #1f2937; border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5), 0 0 0 2px rgba(59, 130, 246, 0.5);">
                     <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover scale-x-flip"></video>
-                    <div id="no-camera-msg" class="hidden w-full h-full flex items-center justify-center text-white text-xs bg-gray-900/80 backdrop-blur-sm">
+                    <div id="no-camera-msg" class="hidden w-full h-full flex items-center justify-center text-white text-xs backdrop-blur-sm absolute inset-0 z-10" style="background: rgba(31, 41, 55, 0.8);">
                         <div class="text-center">
                             <i data-lucide="video-off" class="w-6 h-6 mx-auto mb-1"></i>
                             <p>No Camera</p>
@@ -200,46 +221,46 @@
         </div>
 
         <!-- Messages Area -->
-        <div class="flex-1 flex flex-col bg-white overflow-hidden relative">
-            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 font-sans">
+        <div class="flex-1 flex flex-col overflow-hidden relative" style="background-color: var(--bg-primary);">
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 font-sans" style="background-color: var(--bg-primary);">
                 <div class="text-center py-4">
-                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full">
-                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow"></div>
-                        <span class="text-blue-600 text-sm font-medium italic">You're talking to a random stranger. Say Hi!</span>
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full" style="background: linear-gradient(135deg, var(--accent-primary-light) 0%, rgba(59, 130, 246, 0.1) 100%); border: 1px solid var(--border-primary);">
+                        <div class="h-2 w-2 rounded-full pulse-slow" style="background-color: var(--accent-primary);"></div>
+                        <span class="text-sm font-medium italic" style="color: var(--accent-primary);">You're talking to a random stranger. Say Hi!</span>
                     </div>
                 </div>
                 <!-- Messages will be injected here -->
             </div>
             
-            <div id="status-indicator" class="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-blue-100 hidden">
+            <div id="status-indicator" class="px-6 py-4 border-t hidden" style="background: linear-gradient(135deg, var(--accent-primary-light) 0%, rgba(59, 130, 246, 0.05) 100%); border-color: var(--border-primary);">
                 <div class="flex items-center justify-center gap-3">
                     <div class="flex gap-1">
-                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0s"></div>
-                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0.2s"></div>
-                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0.4s"></div>
+                        <div class="h-2 w-2 rounded-full pulse-slow" style="background-color: var(--accent-primary); animation-delay: 0s"></div>
+                        <div class="h-2 w-2 rounded-full pulse-slow" style="background-color: var(--accent-primary); animation-delay: 0.2s"></div>
+                        <div class="h-2 w-2 rounded-full pulse-slow" style="background-color: var(--accent-primary); animation-delay: 0.4s"></div>
                     </div>
-                    <p class="text-blue-600 font-semibold text-sm">Looking for someone you can chat with...</p>
+                    <p class="font-semibold text-sm" style="color: var(--accent-primary);">Looking for someone you can chat with...</p>
                 </div>
             </div>
-            <div id="disconnect-indicator" class="px-6 py-4 bg-gradient-to-r from-red-50 to-orange-50 border-t border-red-100 hidden">
+            <div id="disconnect-indicator" class="px-6 py-4 border-t hidden" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%); border-color: var(--status-error);">
                 <div class="flex items-center justify-center gap-2">
-                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-600"></i>
-                    <p class="text-red-600 font-bold text-sm">Stranger has disconnected.</p>
+                    <i data-lucide="alert-circle" class="w-5 h-5" style="color: var(--status-error);"></i>
+                    <p class="font-bold text-sm" style="color: var(--status-error);">Stranger has disconnected.</p>
                 </div>
             </div>
 
             <!-- Input Controls -->
-            <div class="p-3 sm:p-4 md:p-6 bg-gradient-to-r from-gray-50 to-white border-t-2 border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 shrink-0 shadow-lg">
-                <button id="btn-stop-next" onclick="app.handleStopNext()" class="h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all bg-white border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 hover:text-red-600 text-gray-700 active:translate-y-0.5 flex-shrink-0 justify-center items-center">
+            <div class="p-3 sm:p-4 md:p-6 border-t flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 shrink-0 shadow-lg" style="background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%); border-color: var(--border-primary);">
+                <button id="btn-stop-next" onclick="app.handleStopNext()" class="h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all border-2 active:translate-y-0.5 flex-shrink-0 justify-center items-center chat-header-btn stop-btn" style="background-color: var(--button-secondary-bg); border-color: var(--button-secondary-border); color: var(--text-primary);">
                     <span class="flex items-center gap-1.5">
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </span>
-                    <span class="ml-1 text-xs text-gray-400 hidden sm:block -mt-0.5">Esc</span>
+                    <span class="ml-1 text-xs hidden sm:block -mt-0.5" style="color: var(--text-tertiary);">Esc</span>
                 </button>
 
                 <div class="flex-1 relative flex items-center">
                     <input type="text" id="msg-input" placeholder="Waiting..." disabled
-                        class="w-full h-11 sm:h-12 pl-4 sm:pl-5 pr-12 sm:pr-14 rounded-xl border-2 border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-gray-800 placeholder-gray-400 font-medium shadow-sm transition-all text-sm sm:text-base">
+                        class="message-input w-full h-11 sm:h-12 pl-4 sm:pl-5 pr-12 sm:pr-14 rounded-xl border-2 focus:outline-none focus:ring-2 disabled:cursor-not-allowed font-medium shadow-sm transition-all text-sm sm:text-base">
                     <button id="btn-send" onclick="app.sendMessage()" disabled
                         class="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-lg bg-gradient-primary text-white hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95">
                         <i data-lucide="send" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
@@ -295,6 +316,9 @@
             init: async function() {
                 // Initialize DOM references
                 initDOM();
+                
+                // Initialize theme system
+                this.initTheme();
                 
                 // Initialize Lucide Icons
                 lucide.createIcons();
@@ -524,7 +548,7 @@
                 state.isSearching = false;
                 
                 // Clear messages
-                this.el.messagesContainer.innerHTML = '<div class="text-center py-4"><div class="inline-flex items-center gap-2 px-4 py-2 bg-red-50 rounded-full"><i data-lucide="alert-circle" class="w-4 h-4 text-red-600"></i><span class="text-red-600 text-sm font-medium">Stranger has disconnected.</span></div></div>';
+                this.el.messagesContainer.innerHTML = '<div class="text-center py-4"><div class="inline-flex items-center gap-2 px-4 py-2 rounded-full" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%); border: 1px solid var(--status-error);"><i data-lucide="alert-circle" class="w-4 h-4" style="color: var(--status-error);"></i><span class="text-sm font-medium" style="color: var(--status-error);">Stranger has disconnected.</span></div></div>';
                 if (window.lucide) {
                     lucide.createIcons();
                 }
@@ -617,11 +641,15 @@
                 
                 // Button Text
                 if (isDisconnected) {
-                    this.el.btnStopNext.className = "h-12 px-6 font-bold rounded-xl shadow-md text-sm uppercase tracking-wide transition-all bg-gradient-primary hover:shadow-lg text-white active:translate-y-0.5 flex-shrink-0";
-                    this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i><span>New Chat</span></span><span class="ml-1 text-xs text-blue-200 block -mt-0.5">Esc</span>';
+                    this.el.btnStopNext.className = "h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all bg-gradient-primary hover:shadow-lg text-white active:translate-y-0.5 flex-shrink-0 justify-center items-center";
+                    this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i><span>New Chat</span></span><span class="ml-1 text-xs text-blue-200 hidden sm:block -mt-0.5">Esc</span>';
+                    this.el.btnStopNext.style.border = 'none';
                 } else {
-                    this.el.btnStopNext.className = "h-12 px-6 font-bold rounded-xl shadow-md text-sm uppercase tracking-wide transition-all bg-white border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 hover:text-red-600 text-gray-700 active:translate-y-0.5 flex-shrink-0";
-                    this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="arrow-right" class="w-4 h-4"></i></span><span class="ml-1 text-xs text-gray-400 block -mt-0.5">Esc</span>';
+                    this.el.btnStopNext.className = "h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all border-2 active:translate-y-0.5 flex-shrink-0 justify-center items-center";
+                    this.el.btnStopNext.style.backgroundColor = 'var(--button-secondary-bg)';
+                    this.el.btnStopNext.style.borderColor = 'var(--button-secondary-border)';
+                    this.el.btnStopNext.style.color = 'var(--text-primary)';
+                    this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="arrow-right" class="w-4 h-4"></i></span><span class="ml-1 text-xs hidden sm:block -mt-0.5" style="color: var(--text-tertiary);">Esc</span>';
                 }
                 
                 // Re-initialize icons after button update
@@ -649,10 +677,10 @@
                 div.innerHTML = `
                     <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%] md:max-w-[60%]">
                         <div class="flex items-center gap-2 mb-1 px-1">
-                            <span class="text-xs font-semibold ${isMe ? 'text-blue-600' : 'text-gray-600'}">${isMe ? 'You' : 'Stranger'}</span>
-                            <span class="text-xs text-gray-400">${timeStr}</span>
+                            <span class="text-xs font-semibold" style="color: ${isMe ? 'var(--accent-primary)' : 'var(--text-secondary)'};">${isMe ? 'You' : 'Stranger'}</span>
+                            <span class="text-xs" style="color: var(--text-tertiary);">${timeStr}</span>
                         </div>
-                        <div class="px-4 py-2.5 rounded-2xl shadow-md ${isMe ? 'bg-gradient-message-you text-white rounded-br-sm' : 'bg-gradient-message-stranger text-gray-800 border border-gray-200 rounded-bl-sm'}">
+                        <div class="px-4 py-2.5 rounded-2xl shadow-md ${isMe ? 'bg-gradient-message-you text-white rounded-br-sm' : 'bg-gradient-message-stranger rounded-bl-sm'}" style="${!isMe ? 'border: 1px solid var(--message-stranger-border); color: var(--text-primary);' : ''}">
                             <p class="break-words text-sm leading-relaxed">${this.escapeHtml(msg.text)}</p>
                         </div>
                     </div>
@@ -687,6 +715,57 @@
                     console.warn("Error updating online count:", err);
                     this.el.onlineCount.innerText = '... online now';
                 }
+            },
+            
+            // Theme Management
+            initTheme: function() {
+                // Check for saved theme preference or system preference
+                const savedTheme = localStorage.getItem('codmegle_theme');
+                const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                
+                let theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+                this.setTheme(theme);
+                
+                // Listen for system theme changes
+                if (window.matchMedia) {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                        if (!localStorage.getItem('codmegle_theme')) {
+                            this.setTheme(e.matches ? 'dark' : 'light');
+                        }
+                    });
+                }
+            },
+            
+            setTheme: function(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('codmegle_theme', theme);
+                
+                // Update theme toggle icon
+                const themeToggle = document.getElementById('theme-toggle');
+                if (themeToggle) {
+                    const lightIcon = themeToggle.querySelector('.theme-icon-light');
+                    const darkIcon = themeToggle.querySelector('.theme-icon-dark');
+                    if (lightIcon && darkIcon) {
+                        if (theme === 'dark') {
+                            lightIcon.classList.add('hidden');
+                            darkIcon.classList.remove('hidden');
+                        } else {
+                            darkIcon.classList.add('hidden');
+                            lightIcon.classList.remove('hidden');
+                        }
+                    }
+                }
+                
+                // Reinitialize icons
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+            },
+            
+            toggleTheme: function() {
+                const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                this.setTheme(newTheme);
             }
         };
 
