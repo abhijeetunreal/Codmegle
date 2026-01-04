@@ -39,7 +39,7 @@ export function setupUIMethods(app) {
             this.el.btnStopNext.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="hidden sm:inline">New Chat</span>';
         } else {
             this.el.btnStopNext.className = "chat-header-btn stop-btn h-9 min-h-[36px] sm:h-10 px-3 sm:px-4 font-semibold rounded-lg text-xs sm:text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-target header-control-btn";
-            this.el.btnStopNext.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i><span class="hidden sm:inline">Stop</span>';
+            this.el.btnStopNext.innerHTML = '<i data-lucide="arrow-right" class="w-4 h-4"></i>';
         }
         
         if (window.lucide) {
