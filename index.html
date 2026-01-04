@@ -232,14 +232,14 @@
                 <!-- Messages will be injected here -->
             </div>
             
-            <div id="status-indicator" class="px-6 py-4 border-t hidden" style="background: linear-gradient(135deg, var(--accent-primary-light) 0%, rgba(59, 130, 246, 0.05) 100%); border-color: var(--border-primary);">
+            <div id="status-indicator" class="status-indicator px-6 py-4 border-t hidden">
                 <div class="flex items-center justify-center gap-3">
-                    <div class="flex gap-1">
-                        <div class="h-2 w-2 rounded-full pulse-slow" style="background-color: var(--accent-primary); animation-delay: 0s"></div>
-                        <div class="h-2 w-2 rounded-full pulse-slow" style="background-color: var(--accent-primary); animation-delay: 0.2s"></div>
-                        <div class="h-2 w-2 rounded-full pulse-slow" style="background-color: var(--accent-primary); animation-delay: 0.4s"></div>
+                    <div class="flex gap-1.5">
+                        <div class="h-2 w-2 status-dot pulse-slow" style="animation-delay: 0s"></div>
+                        <div class="h-2 w-2 status-dot pulse-slow" style="animation-delay: 0.2s"></div>
+                        <div class="h-2 w-2 status-dot pulse-slow" style="animation-delay: 0.4s"></div>
                     </div>
-                    <p class="font-semibold text-sm" style="color: var(--accent-primary);">Looking for someone you can chat with...</p>
+                    <p class="status-indicator-text font-semibold text-sm">Looking for someone you can chat with...</p>
                 </div>
             </div>
             <div id="disconnect-indicator" class="px-6 py-4 border-t hidden" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%); border-color: var(--status-error);">
