@@ -10,7 +10,7 @@ export function setupUIMethods(app) {
 
         this.el.msgInput.disabled = !isConnected;
         this.el.btnSend.disabled = !isConnected;
-        this.el.msgInput.placeholder = isConnected ? "Type your message..." : (isDisconnected ? "Stranger disconnected" : "Waiting for connection...");
+        this.el.msgInput.placeholder = isConnected ? "Type a message..." : (isDisconnected ? "Stranger disconnected" : "Waiting for connection...");
         
         // Enable/disable profile button
         if (this.el.profileBtn) {
@@ -35,11 +35,11 @@ export function setupUIMethods(app) {
         }
         
         if (isDisconnected) {
-            this.el.btnStopNext.className = "h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all bg-gradient-primary hover:shadow-lg text-white active:translate-y-0.5 flex-shrink-0 justify-center items-center";
-            this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="hidden sm:inline">New Chat</span></span><span class="ml-1 text-xs text-blue-200 hidden sm:block -mt-0.5">Esc</span>';
+            this.el.btnStopNext.className = "chat-header-btn stop-btn h-9 min-h-[36px] sm:h-10 px-3 sm:px-4 font-semibold rounded-lg text-xs sm:text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-target header-control-btn bg-gradient-primary text-white";
+            this.el.btnStopNext.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="hidden sm:inline">New Chat</span>';
         } else {
-            this.el.btnStopNext.className = "h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all bg-white border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 hover:text-red-600 text-gray-700 active:translate-y-0.5 flex-shrink-0 justify-center items-center";
-            this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="x" class="w-4 h-4"></i><span class="hidden sm:inline">Stop</span></span><span class="ml-1 text-xs text-gray-400 hidden sm:block -mt-0.5">Esc</span>';
+            this.el.btnStopNext.className = "chat-header-btn stop-btn h-9 min-h-[36px] sm:h-10 px-3 sm:px-4 font-semibold rounded-lg text-xs sm:text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-target header-control-btn";
+            this.el.btnStopNext.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i><span class="hidden sm:inline">Stop</span>';
         }
         
         if (window.lucide) {
@@ -501,6 +501,56 @@ export function setupUIMethods(app) {
         
         // Close modal
         this.closeSettingsModal();
+    };
+    
+    app.initTheme = function() {
+        // Check for saved theme preference or system preference
+        const savedTheme = localStorage.getItem('codmegle_theme');
+        const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        let theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+        this.setTheme(theme);
+        
+        // Listen for system theme changes
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('codmegle_theme')) {
+                    this.setTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+        }
+    };
+    
+    app.setTheme = function(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('codmegle_theme', theme);
+        
+        // Update theme toggle icon
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            const lightIcon = themeToggle.querySelector('.theme-icon-light');
+            const darkIcon = themeToggle.querySelector('.theme-icon-dark');
+            if (lightIcon && darkIcon) {
+                if (theme === 'dark') {
+                    lightIcon.classList.add('hidden');
+                    darkIcon.classList.remove('hidden');
+                } else {
+                    darkIcon.classList.add('hidden');
+                    lightIcon.classList.remove('hidden');
+                }
+            }
+        }
+        
+        // Reinitialize icons
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    };
+    
+    app.toggleTheme = function() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        this.setTheme(newTheme);
     };
 }
 

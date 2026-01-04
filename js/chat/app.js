@@ -51,6 +51,9 @@ export function createApp() {
             // Initialize DOM references
             initDOM();
             
+            // Initialize theme system
+            this.initTheme();
+            
             // Initialize Lucide Icons
             lucide.createIcons();
             

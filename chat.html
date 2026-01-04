@@ -10,66 +10,70 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="css/chat.css">
 </head>
-<body class="bg-gradient-to-b from-gray-50 to-white h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden body-theme">
 
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 p-2.5 sm:p-3 md:p-4 flex justify-between items-center shadow-md header-responsive shrink-0 z-10 backdrop-blur-sm bg-white/95">
+    <header class="header-main border-b p-2.5 sm:p-3 md:p-4 flex justify-between items-center shadow-md header-responsive shrink-0 z-10 backdrop-blur-sm">
         <div class="flex items-center select-none cursor-pointer group" onclick="window.location.href='index.html'">
-            <span class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-gray-800 group-hover:text-blue-600 transition-colors">Cod</span>
+            <span class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight header-logo-text group-hover:text-blue-600 transition-colors">Cod</span>
             <span class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-orange-500 to-orange-600 px-1 sm:px-1.5 md:px-2 py-0.5 transform -rotate-2 shadow-lg inline-block ml-0.5 sm:ml-1 rounded-md group-hover:shadow-xl transition-shadow">megle</span>
         </div>
-        <div class="flex items-center gap-1 sm:gap-1.5 md:gap-2">
+        <div class="flex items-center gap-2 sm:gap-2.5 md:gap-3">
+            <button id="theme-toggle" onclick="app.toggleTheme()" class="theme-toggle-btn flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all active:scale-95" title="Toggle theme">
+                <i data-lucide="sun" class="w-5 h-5 theme-icon-light"></i>
+                <i data-lucide="moon" class="w-5 h-5 theme-icon-dark hidden"></i>
+            </button>
             <div class="h-1.5 w-1.5 sm:h-2 sm:w-2 bg-green-500 rounded-full pulse-slow"></div>
-            <div class="text-xs sm:text-sm md:text-base text-gray-600 font-semibold px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 md:py-1.5 bg-gray-100 rounded-full whitespace-nowrap header-online-count" id="online-count">
+            <div class="text-xs sm:text-sm md:text-base header-online-text font-semibold px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 md:py-1.5 header-online-bg rounded-full whitespace-nowrap header-online-count" id="online-count">
                 Connecting...
             </div>
         </div>
     </header>
 
     <!-- Chat Screen -->
-    <div id="chat-screen-container" class="flex-1 flex flex-col lg:flex-row h-full overflow-hidden bg-gradient-to-b from-gray-50 to-white desktop-split-container">
+    <div id="chat-screen-container" class="flex-1 flex flex-col lg:flex-row h-full overflow-hidden desktop-split-container chat-screen-theme">
         
-        <!-- Video Container -->
-        <div id="video-container" class="hidden desktop-video-panel video-container-responsive bg-gradient-to-br from-gray-900 to-black relative flex justify-center items-center shrink-0 border-b-2 lg:border-b-0 lg:border-r-2 border-gray-800 shadow-2xl">
+        <!-- Video Container - Google Meet Inspired -->
+        <div id="video-container" class="hidden desktop-video-panel video-container-responsive video-container relative flex justify-center items-center shrink-0 border-b lg:border-b-0 lg:border-r border-color">
             <div class="w-full h-full relative">
                 <!-- Remote Video Placeholder -->
-                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black" id="remote-video-container">
-                    <div class="text-center">
-                        <div class="pulse-slow mb-4">
-                            <div class="mx-auto w-16 h-16 bg-blue-600/20 rounded-full flex items-center justify-center">
-                                <i data-lucide="video" class="text-blue-400 w-8 h-8"></i>
+                <div class="w-full h-full flex items-center justify-center video-placeholder" id="remote-video-container">
+                    <div class="text-center video-placeholder-content">
+                        <div class="pulse-slow mb-5">
+                            <div class="mx-auto w-20 h-20 video-icon-wrapper rounded-full flex items-center justify-center">
+                                <i data-lucide="video" class="video-icon w-10 h-10"></i>
                             </div>
                         </div>
-                        <p class="text-gray-400 text-sm font-medium">Waiting for remote video...</p>
+                        <p class="video-placeholder-text text-base font-medium">Waiting for remote video...</p>
                     </div>
                 </div>
-                <div id="video-waiting-msg" class="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm text-gray-300 hidden">
+                <div id="video-waiting-msg" class="absolute inset-0 flex items-center justify-center video-overlay hidden">
                     <div class="text-center">
-                        <div class="pulse-slow mb-3">
-                            <div class="mx-auto w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
-                                <i data-lucide="users" class="text-blue-400 w-6 h-6"></i>
+                        <div class="pulse-slow mb-4">
+                            <div class="mx-auto w-16 h-16 video-icon-wrapper rounded-full flex items-center justify-center">
+                                <i data-lucide="users" class="video-icon w-8 h-8"></i>
                             </div>
                         </div>
-                        <p class="font-semibold">Waiting for partner...</p>
+                        <p class="video-overlay-text font-semibold text-lg">Waiting for partner...</p>
                     </div>
                 </div>
 
-                <!-- Local Video -->
-                <div id="local-video-container" class="absolute top-2 left-2 sm:top-4 sm:left-4 local-video-responsive bg-gray-800 border-2 sm:border-4 border-white shadow-2xl overflow-hidden rounded-lg sm:rounded-xl ring-1 sm:ring-2 ring-blue-500/50 relative cursor-move select-none z-30" style="touch-action: none;">
+                <!-- Local Video - Google Meet Style -->
+                <div id="local-video-container" class="absolute top-3 left-3 sm:top-4 sm:left-4 local-video-responsive local-video-wrapper local-video-bg border overflow-hidden rounded-lg relative cursor-move select-none z-30 shadow-xl" style="touch-action: none;">
                     <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover scale-x-flip"></video>
-                    <div id="no-camera-msg" class="hidden w-full h-full flex items-center justify-center text-white text-xs bg-gray-900/80 backdrop-blur-sm absolute inset-0 z-10">
+                    <div id="no-camera-msg" class="hidden w-full h-full flex items-center justify-center text-white text-xs video-overlay absolute inset-0 z-10">
                         <div class="text-center">
                             <i data-lucide="video-off" class="w-6 h-6 mx-auto mb-1"></i>
                             <p>No Camera</p>
                         </div>
                     </div>
                     <!-- Mute indicator badge -->
-                    <div id="mute-indicator" class="hidden absolute top-1 left-1 bg-red-500 rounded-full p-1 z-20 shadow-lg">
-                        <i data-lucide="mic-off" class="w-3 h-3 text-white"></i>
+                    <div id="mute-indicator" class="hidden absolute bottom-2 left-2 video-badge bg-red-500 rounded-full p-1.5 z-20 shadow-lg">
+                        <i data-lucide="mic-off" class="w-3.5 h-3.5 text-white"></i>
                     </div>
                     <!-- Video off indicator badge -->
-                    <div id="video-off-indicator" class="hidden absolute top-1 right-1 bg-red-500 rounded-full p-1 z-20 shadow-lg">
-                        <i data-lucide="video-off" class="w-3 h-3 text-white"></i>
+                    <div id="video-off-indicator" class="hidden absolute bottom-2 right-2 video-badge bg-red-500 rounded-full p-1.5 z-20 shadow-lg">
+                        <i data-lucide="video-off" class="w-3.5 h-3.5 text-white"></i>
                     </div>
                 </div>
             </div>
@@ -79,78 +83,75 @@
         <div id="resizable-splitter" class="resizable-splitter hidden lg:block"></div>
 
         <!-- Messages Area -->
-        <div class="flex-1 flex flex-col desktop-chat-panel bg-white overflow-hidden relative">
-            <!-- Chat Header with Profile Button -->
-            <div class="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-200 bg-white shrink-0 z-10 header-controls-wrapper">
-                <div class="flex items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
+        <div class="flex-1 flex flex-col desktop-chat-panel overflow-hidden relative">
+            <!-- Chat Header with Profile Button - Teams Inspired -->
+            <div class="chat-header flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b shrink-0 z-10 header-controls-wrapper">
+                <div class="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                     <!-- Control Buttons -->
-                    <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                        <button id="btn-stop-next" onclick="app.handleStopNext()" class="h-9 min-h-[36px] sm:h-10 px-2.5 sm:px-3.5 font-bold rounded-lg shadow-sm text-xs sm:text-sm uppercase tracking-wide transition-all bg-white border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 hover:text-red-600 text-gray-700 active:translate-y-0.5 flex flex-col items-center justify-center touch-target header-control-btn">
-                            <span class="flex items-center gap-1 leading-none">
-                                <i data-lucide="x" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
-                                <span class="hidden sm:inline">Stop</span>
-                            </span>
-                            <span class="text-[10px] sm:text-[10px] text-gray-400 leading-none mt-0.5 hidden sm:block">Esc</span>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button id="btn-stop-next" onclick="app.handleStopNext()" class="chat-header-btn stop-btn h-9 min-h-[36px] sm:h-10 px-3 sm:px-4 font-semibold rounded-lg text-xs sm:text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-target header-control-btn">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                            <span class="hidden sm:inline">Stop</span>
                         </button>
 
                         <!-- Media Control Buttons (only visible in video mode) -->
-                        <button id="btn-mute" onclick="app.toggleMute()" class="h-9 min-h-[36px] w-9 min-w-[36px] sm:h-10 sm:w-10 flex items-center justify-center rounded-lg shadow-sm transition-all bg-white border-2 border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-700 active:translate-y-0.5 flex-shrink-0 hidden touch-target header-control-btn">
-                            <i data-lucide="mic" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+                        <button id="btn-mute" onclick="app.toggleMute()" class="chat-header-btn media-btn h-9 min-h-[36px] w-9 min-w-[36px] sm:h-10 sm:w-10 flex items-center justify-center rounded-lg transition-all active:scale-95 flex-shrink-0 hidden touch-target header-control-btn" title="Toggle Microphone">
+                            <i data-lucide="mic" class="w-4.5 h-4.5"></i>
                         </button>
-                        <button id="btn-video-toggle" onclick="app.toggleVideo()" class="h-9 min-h-[36px] w-9 min-w-[36px] sm:h-10 sm:w-10 flex items-center justify-center rounded-lg shadow-sm transition-all bg-white border-2 border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-700 active:translate-y-0.5 flex-shrink-0 hidden touch-target header-control-btn">
-                            <i data-lucide="video" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+                        <button id="btn-video-toggle" onclick="app.toggleVideo()" class="chat-header-btn media-btn h-9 min-h-[36px] w-9 min-w-[36px] sm:h-10 sm:w-10 flex items-center justify-center rounded-lg transition-all active:scale-95 flex-shrink-0 hidden touch-target header-control-btn" title="Toggle Video">
+                            <i data-lucide="video" class="w-4.5 h-4.5"></i>
                         </button>
-                        <button id="btn-settings" onclick="app.showSettingsModal()" class="h-9 min-h-[36px] w-9 min-w-[36px] sm:h-10 sm:w-10 flex items-center justify-center rounded-lg shadow-sm transition-all bg-white border-2 border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-700 active:translate-y-0.5 flex-shrink-0 hidden touch-target header-control-btn" title="Device Settings">
-                            <i data-lucide="settings" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+                        <button id="btn-settings" onclick="app.showSettingsModal()" class="chat-header-btn media-btn h-9 min-h-[36px] w-9 min-w-[36px] sm:h-10 sm:w-10 flex items-center justify-center rounded-lg transition-all active:scale-95 flex-shrink-0 hidden touch-target header-control-btn" title="Device Settings">
+                            <i data-lucide="settings" class="w-4.5 h-4.5"></i>
                         </button>
                     </div>
                     
-                    <div class="flex items-center gap-2 flex-shrink-0 ml-1 sm:ml-2">
+                    <div class="flex items-center gap-2.5 flex-shrink-0 ml-2 sm:ml-3">
                         <div class="h-2 w-2 bg-green-500 rounded-full pulse-slow"></div>
-                        <span class="text-sm font-semibold text-gray-700 whitespace-nowrap" id="stranger-status">Stranger</span>
+                        <span class="text-sm font-semibold chat-header-status whitespace-nowrap" id="stranger-status">Stranger</span>
                     </div>
                 </div>
-                <button id="profile-btn" onclick="app.showProfile()" class="profile-btn flex-shrink-0" title="View Profile" disabled>
+                <button id="profile-btn" onclick="app.showProfile()" class="chat-header-btn profile-btn flex-shrink-0 px-3 sm:px-4 py-2 rounded-lg transition-all active:scale-95" title="View Profile" disabled>
                     <i data-lucide="user" class="w-5 h-5"></i>
-                    <span class="hidden sm:inline text-sm font-medium">Profile</span>
+                    <span class="hidden sm:inline text-sm font-medium ml-2">Profile</span>
                 </button>
             </div>
             
-            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 font-sans">
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 font-sans messages-container">
                 <div class="text-center py-4">
-                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full">
-                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow"></div>
-                        <span class="text-blue-600 text-sm font-medium italic">You're talking to a random stranger. Say Hi!</span>
+                    <div class="inline-flex items-center gap-2.5 px-5 py-2.5 welcome-message rounded-full">
+                        <div class="h-2 w-2 status-dot pulse-slow"></div>
+                        <span class="welcome-message-text text-sm font-medium italic">You're talking to a random stranger. Say Hi!</span>
                     </div>
                 </div>
                 <!-- Messages will be injected here -->
             </div>
             
-            <div id="status-indicator" class="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-blue-100 hidden">
+            <div id="status-indicator" class="status-indicator px-6 py-4 border-t hidden">
                 <div class="flex items-center justify-center gap-3">
-                    <div class="flex gap-1">
-                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0s"></div>
-                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0.2s"></div>
-                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0.4s"></div>
+                    <div class="flex gap-1.5">
+                        <div class="h-2 w-2 status-dot pulse-slow" style="animation-delay: 0s"></div>
+                        <div class="h-2 w-2 status-dot pulse-slow" style="animation-delay: 0.2s"></div>
+                        <div class="h-2 w-2 status-dot pulse-slow" style="animation-delay: 0.4s"></div>
                     </div>
-                    <p class="text-blue-600 font-semibold text-sm">Looking for someone you can chat with...</p>
+                    <p class="status-indicator-text font-semibold text-sm">Looking for someone you can chat with...</p>
                 </div>
             </div>
-            <div id="disconnect-indicator" class="px-6 py-4 bg-gradient-to-r from-red-50 to-orange-50 border-t border-red-100 hidden">
-                <div class="flex items-center justify-center gap-2">
-                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-600"></i>
-                    <p class="text-red-600 font-bold text-sm">Stranger has disconnected.</p>
+            <div id="disconnect-indicator" class="disconnect-indicator px-6 py-4 border-t hidden">
+                <div class="flex items-center justify-center gap-2.5">
+                    <i data-lucide="alert-circle" class="w-5 h-5 disconnect-icon"></i>
+                    <p class="disconnect-text font-semibold text-sm">Stranger has disconnected.</p>
                 </div>
             </div>
 
-            <!-- Input Controls -->
-            <div class="p-2.5 sm:p-3 md:p-4 lg:p-6 bg-gradient-to-r from-gray-50 to-white border-t-2 border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 md:gap-3 shrink-0 shadow-lg input-controls-container">
-                <div class="flex-1 relative flex items-center min-w-0">
-                    <input type="text" id="msg-input" placeholder="Waiting..." disabled
-                        class="w-full h-11 min-h-[44px] sm:h-12 pl-3 sm:pl-4 md:pl-5 pr-11 sm:pr-12 md:pr-14 rounded-xl border-2 border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-gray-800 placeholder-gray-400 font-medium shadow-sm transition-all text-base sm:text-base mobile-input">
+            <!-- Input Controls - WhatsApp Inspired -->
+            <div class="input-area p-3 sm:p-4 md:p-5 lg:p-6 border-t flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 input-controls-container">
+                <div class="flex-1 relative flex items-center min-w-0 input-wrapper">
+                    <input type="text" id="msg-input" placeholder="Type a message..." disabled
+                        class="message-input w-full h-12 min-h-[48px] sm:h-12 pl-4 sm:pl-5 pr-14 sm:pr-16 rounded-full border focus:outline-none disabled:cursor-not-allowed font-normal transition-all text-base mobile-input">
                     <button id="btn-send" onclick="app.sendMessage()" disabled
-                        class="absolute right-1.5 sm:right-2 top-1/2 transform -translate-y-1/2 h-8 min-h-[44px] w-8 min-w-[44px] sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center rounded-lg bg-gradient-primary text-white hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 touch-target">
-                        <i data-lucide="send" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
+                        class="send-button absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-10 min-h-[40px] w-10 min-w-[40px] sm:h-10 sm:w-10 flex items-center justify-center rounded-full text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 touch-target">
+                        <i data-lucide="send" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
