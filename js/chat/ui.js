@@ -1,5 +1,6 @@
 // UI management and interactions
 import { state } from '../state.js';
+import { showAlert } from '../alert.js';
 
 export function setupUIMethods(app) {
     app.updateUIState = function() {
@@ -9,7 +10,7 @@ export function setupUIMethods(app) {
 
         this.el.msgInput.disabled = !isConnected;
         this.el.btnSend.disabled = !isConnected;
-        this.el.msgInput.placeholder = isConnected ? "Type your message..." : (isDisconnected ? "Stranger disconnected" : "Waiting for connection...");
+        this.el.msgInput.placeholder = isConnected ? "Type a message..." : (isDisconnected ? "Stranger disconnected" : "Waiting for connection...");
         
         // Enable/disable profile button
         if (this.el.profileBtn) {
@@ -24,6 +25,9 @@ export function setupUIMethods(app) {
         if (this.el.btnVideoToggle) {
             this.el.btnVideoToggle.classList.toggle('hidden', !showMediaButtons);
         }
+        if (this.el.btnSettings) {
+            this.el.btnSettings.classList.toggle('hidden', !showMediaButtons);
+        }
         
         // Update media button states
         if (showMediaButtons) {
@@ -31,11 +35,11 @@ export function setupUIMethods(app) {
         }
         
         if (isDisconnected) {
-            this.el.btnStopNext.className = "h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all bg-gradient-primary hover:shadow-lg text-white active:translate-y-0.5 flex-shrink-0 justify-center items-center";
-            this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="hidden sm:inline">New Chat</span></span><span class="ml-1 text-xs text-blue-200 hidden sm:block -mt-0.5">Esc</span>';
+            this.el.btnStopNext.className = "chat-header-btn stop-btn h-9 min-h-[36px] sm:h-10 px-3 sm:px-4 font-semibold rounded-lg text-xs sm:text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-target header-control-btn bg-gradient-primary text-white";
+            this.el.btnStopNext.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="hidden sm:inline">New Chat</span>';
         } else {
-            this.el.btnStopNext.className = "h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all bg-white border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 hover:text-red-600 text-gray-700 active:translate-y-0.5 flex-shrink-0 justify-center items-center";
-            this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="x" class="w-4 h-4"></i><span class="hidden sm:inline">Stop</span></span><span class="ml-1 text-xs text-gray-400 hidden sm:block -mt-0.5">Esc</span>';
+            this.el.btnStopNext.className = "chat-header-btn stop-btn h-9 min-h-[36px] sm:h-10 px-3 sm:px-4 font-semibold rounded-lg text-xs sm:text-sm uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center gap-1.5 touch-target header-control-btn";
+            this.el.btnStopNext.innerHTML = '<i data-lucide="arrow-right" class="w-4 h-4"></i>';
         }
         
         if (window.lucide) {
@@ -393,6 +397,160 @@ export function setupUIMethods(app) {
                 updateVideoMode();
             }, 200);
         });
+    };
+    
+    app.showSettingsModal = async function() {
+        if (!this.el.settingsModal || !this.el.settingsCameraSelect || !this.el.settingsAudioSelect) {
+            console.error("Settings modal elements not found");
+            return;
+        }
+        
+        // Show modal - use 'active' class like profile modal
+        this.el.settingsModal.classList.remove('hidden');
+        this.el.settingsModal.classList.add('active');
+        
+        // Populate device selects
+        await this.populateDeviceSelects();
+        
+        // Initialize icons
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    };
+    
+    app.closeSettingsModal = function(event) {
+        // Only close if clicking on overlay, not modal content
+        if (event && event.target !== event.currentTarget && !event.target.closest('.profile-close-btn')) {
+            return;
+        }
+        
+        if (this.el.settingsModal) {
+            this.el.settingsModal.classList.remove('active');
+            // Keep hidden class for initial state
+            this.el.settingsModal.classList.add('hidden');
+        }
+    };
+    
+    app.populateDeviceSelects = async function() {
+        if (!this.el.settingsCameraSelect || !this.el.settingsAudioSelect) {
+            return;
+        }
+        
+        // Import enumerateDevices and getSavedDevicePreferences
+        const { enumerateDevices, getSavedDevicePreferences } = await import('../camera.js');
+        
+        // Get saved preferences
+        const prefs = getSavedDevicePreferences();
+        
+        // Enumerate devices
+        const { cameras, microphones } = await enumerateDevices();
+        
+        // Populate camera select
+        this.el.settingsCameraSelect.innerHTML = '<option value="">Default Camera</option>';
+        cameras.forEach(camera => {
+            const option = document.createElement('option');
+            option.value = camera.deviceId;
+            option.textContent = camera.label;
+            if (camera.deviceId === prefs.cameraId) {
+                option.selected = true;
+            }
+            this.el.settingsCameraSelect.appendChild(option);
+        });
+        
+        // Populate audio select
+        this.el.settingsAudioSelect.innerHTML = '<option value="">Default Microphone</option>';
+        microphones.forEach(mic => {
+            const option = document.createElement('option');
+            option.value = mic.deviceId;
+            option.textContent = mic.label;
+            if (mic.deviceId === prefs.audioId) {
+                option.selected = true;
+            }
+            this.el.settingsAudioSelect.appendChild(option);
+        });
+    };
+    
+    app.applyDeviceSettings = async function() {
+        if (!this.el.settingsCameraSelect || !this.el.settingsAudioSelect) {
+            return;
+        }
+        
+        const selectedCameraId = this.el.settingsCameraSelect.value || null;
+        const selectedAudioId = this.el.settingsAudioSelect.value || null;
+        
+        // Import saveDevicePreferences and switchDevice
+        const { saveDevicePreferences, switchDevice, getCurrentStream } = await import('../camera.js');
+        
+        // Save preferences
+        saveDevicePreferences(selectedCameraId, selectedAudioId);
+        
+        // If camera is active, switch devices
+        if (this.mode === 'video' && (this.localStream || getCurrentStream())) {
+            try {
+                await this.switchDevice(selectedCameraId, selectedAudioId);
+                // Show success feedback
+                showAlert("Device settings applied successfully", 'success');
+            } catch (err) {
+                console.error("Failed to switch devices:", err);
+                showAlert("Failed to switch devices. Settings saved for next session.", 'warning');
+            }
+        } else {
+            // Just save preferences for next time
+            showAlert("Settings saved", 'success');
+        }
+        
+        // Close modal
+        this.closeSettingsModal();
+    };
+    
+    app.initTheme = function() {
+        // Check for saved theme preference or system preference
+        const savedTheme = localStorage.getItem('codmegle_theme');
+        const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        let theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+        this.setTheme(theme);
+        
+        // Listen for system theme changes
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('codmegle_theme')) {
+                    this.setTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+        }
+    };
+    
+    app.setTheme = function(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('codmegle_theme', theme);
+        
+        // Update theme toggle icon
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            const lightIcon = themeToggle.querySelector('.theme-icon-light');
+            const darkIcon = themeToggle.querySelector('.theme-icon-dark');
+            if (lightIcon && darkIcon) {
+                if (theme === 'dark') {
+                    lightIcon.classList.add('hidden');
+                    darkIcon.classList.remove('hidden');
+                } else {
+                    darkIcon.classList.add('hidden');
+                    lightIcon.classList.remove('hidden');
+                }
+            }
+        }
+        
+        // Reinitialize icons
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    };
+    
+    app.toggleTheme = function() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        this.setTheme(newTheme);
     };
 }
 

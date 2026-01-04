@@ -3,16 +3,87 @@ import { dom } from './dom.js';
 
 let cameraStream = null;
 
-export async function startCamera() {
+// Enumerate available devices
+export async function enumerateDevices() {
   try {
-    if (cameraStream) {
-      return cameraStream;
+    // Request permission first to get device labels (some browsers require this)
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    } catch (e) {
+      // Permission denied or devices unavailable, but we can still enumerate
+      console.warn("Could not get initial media access for device enumeration:", e);
     }
     
-    cameraStream = await navigator.mediaDevices.getUserMedia({ 
-      video: true, 
-      audio: true 
-    });
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    
+    const cameras = devices
+      .filter(device => device.kind === 'videoinput')
+      .map(device => ({
+        deviceId: device.deviceId,
+        label: device.label || `Camera ${device.deviceId.substring(0, 8)}`,
+        kind: device.kind
+      }));
+    
+    const microphones = devices
+      .filter(device => device.kind === 'audioinput')
+      .map(device => ({
+        deviceId: device.deviceId,
+        label: device.label || `Microphone ${device.deviceId.substring(0, 8)}`,
+        kind: device.kind
+      }));
+    
+    return { cameras, microphones };
+  } catch (err) {
+    console.error("Device enumeration error:", err);
+    return { cameras: [], microphones: [] };
+  }
+}
+
+// Get saved device preferences
+export function getSavedDevicePreferences() {
+  return {
+    cameraId: localStorage.getItem('codmegle_selectedCameraId') || null,
+    audioId: localStorage.getItem('codmegle_selectedAudioId') || null
+  };
+}
+
+// Save device preferences
+export function saveDevicePreferences(cameraId, audioId) {
+  if (cameraId) {
+    localStorage.setItem('codmegle_selectedCameraId', cameraId);
+  } else {
+    localStorage.removeItem('codmegle_selectedCameraId');
+  }
+  
+  if (audioId) {
+    localStorage.setItem('codmegle_selectedAudioId', audioId);
+  } else {
+    localStorage.removeItem('codmegle_selectedAudioId');
+  }
+}
+
+export async function startCamera(videoDeviceId = null, audioDeviceId = null) {
+  try {
+    // If no device IDs provided, try to load from preferences
+    if (!videoDeviceId && !audioDeviceId) {
+      const prefs = getSavedDevicePreferences();
+      videoDeviceId = prefs.cameraId;
+      audioDeviceId = prefs.audioId;
+    }
+    
+    // Build constraints
+    const constraints = {
+      video: videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true,
+      audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true
+    };
+    
+    // Stop existing stream if switching devices
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+    
+    cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
     
     if (dom.camera) {
       dom.camera.srcObject = cameraStream;
@@ -31,6 +102,50 @@ export async function startCamera() {
   }
 }
 
+// Switch devices during active call
+export async function switchDevice(videoDeviceId = null, audioDeviceId = null) {
+  try {
+    // If no device IDs provided, try to load from preferences
+    if (!videoDeviceId && !audioDeviceId) {
+      const prefs = getSavedDevicePreferences();
+      videoDeviceId = prefs.cameraId;
+      audioDeviceId = prefs.audioId;
+    }
+    
+    // Build constraints - if switching only one device, keep the other from current stream
+    const constraints = {
+      video: videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true,
+      audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true
+    };
+    
+    // Stop old tracks first
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+    
+    // Get new stream
+    const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    // Update cameraStream reference
+    cameraStream = newStream;
+    
+    // Update camera element
+    if (dom.camera && cameraStream) {
+      dom.camera.srcObject = cameraStream;
+      try {
+        await dom.camera.play();
+      } catch (playErr) {
+        console.warn("Camera element play error after device switch:", playErr);
+      }
+    }
+    
+    return cameraStream;
+  } catch (err) {
+    console.error("Device switch error:", err);
+    throw err;
+  }
+}
+
 export function stopCamera() {
   if (cameraStream) {
     cameraStream.getTracks().forEach(track => track.stop());
@@ -40,5 +155,10 @@ export function stopCamera() {
   if (dom.camera) {
     dom.camera.srcObject = null;
   }
+}
+
+// Get current stream
+export function getCurrentStream() {
+  return cameraStream;
 }
 
