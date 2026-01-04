@@ -357,5 +357,42 @@ export function setupUIMethods(app) {
             noCameraMsg.style.pointerEvents = 'none';
         }
     };
+    
+    app.initResponsiveHandler = function() {
+        const chatScreenContainer = document.getElementById('chat-screen-container');
+        if (!chatScreenContainer) return;
+        
+        const updateVideoMode = () => {
+            const isDesktop = window.innerWidth >= 1024;
+            const isVideoMode = this.mode === 'video';
+            const isVideoVisible = this.el.videoContainer && !this.el.videoContainer.classList.contains('hidden');
+            
+            if (isDesktop && isVideoMode && isVideoVisible) {
+                chatScreenContainer.classList.add('video-mode');
+            } else {
+                chatScreenContainer.classList.remove('video-mode');
+            }
+        };
+        
+        // Initial update
+        updateVideoMode();
+        
+        // Handle window resize with debouncing
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                updateVideoMode();
+            }, 150);
+        });
+        
+        // Handle orientation change on mobile devices
+        window.addEventListener('orientationchange', () => {
+            // Wait for orientation change to complete
+            setTimeout(() => {
+                updateVideoMode();
+            }, 200);
+        });
+    };
 }
 

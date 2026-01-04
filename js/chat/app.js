@@ -55,6 +55,9 @@ export function createApp() {
             
             // Initialize draggable local video
             this.initDraggableLocalVideo();
+            
+            // Initialize responsive handler for dynamic layout updates
+            this.initResponsiveHandler();
 
             // Get mode from URL or localStorage
             const urlParams = new URLSearchParams(window.location.search);
@@ -103,9 +106,15 @@ export function createApp() {
                 }
             }
 
-            // Input Listeners
-            this.el.msgInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.sendMessage();
+            // Input Listeners - Send message on Enter key (only if message contains text)
+            this.el.msgInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    const text = this.el.msgInput.value.trim();
+                    if (text && !this.el.msgInput.disabled) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                }
             });
 
             // Global Key Listener
