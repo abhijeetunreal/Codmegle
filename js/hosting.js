@@ -252,6 +252,11 @@ export async function host() {
               if (window.app && window.app.appendMessage) {
                 window.app.appendMessage(message);
               }
+            } else if (message.type === 'PROFILE') {
+              // Handle incoming profile message
+              if (window.app && window.app.handleProfileReceived) {
+                window.app.handleProfileReceived(message.profile);
+              }
             } else if (message.type === 'DISCONNECT') {
               console.log("Received DISCONNECT message from peer");
               // Clean up connection
@@ -383,7 +388,12 @@ export async function host() {
                   if (window.app && window.app.appendMessage) {
                     window.app.appendMessage(message);
                   }
-                  } else if (message.type === 'DISCONNECT') {
+                } else if (message.type === 'PROFILE') {
+                  // Handle incoming profile message
+                  if (window.app && window.app.handleProfileReceived) {
+                    window.app.handleProfileReceived(message.profile);
+                  }
+                } else if (message.type === 'DISCONNECT') {
                   console.log("Received DISCONNECT message from peer");
                   // Clean up connection
                   if (state.call) {
@@ -592,7 +602,7 @@ export async function join(idOrLink) {
             window.app.status = 'connected';
             window.app.updateUIState();
             if (window.app.el && window.app.el.messagesContainer) {
-              window.app.el.messagesContainer.innerHTML = '<div class="text-gray-500 text-sm mb-4 italic">Connected! Say Hi!</div>';
+              window.app.el.messagesContainer.innerHTML = '<div class="text-center py-4"><div class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full"><div class="h-2 w-2 bg-green-500 rounded-full"></div><span class="text-green-600 text-sm font-medium">Connected! Say Hi!</span></div></div>';
             }
           }
           
@@ -852,7 +862,12 @@ export async function join(idOrLink) {
             if (window.app && window.app.appendMessage) {
               window.app.appendMessage(message);
             }
-                } else if (message.type === 'DISCONNECT') {
+          } else if (message.type === 'PROFILE') {
+            // Handle incoming profile message
+            if (window.app && window.app.handleProfileReceived) {
+              window.app.handleProfileReceived(message.profile);
+            }
+          } else if (message.type === 'DISCONNECT') {
                   console.log("Received DISCONNECT message from peer");
                   // Clean up connection
                   if (state.call) {
@@ -980,7 +995,7 @@ export async function join(idOrLink) {
             window.app.updateUIState();
             // Update messages
             if (window.app.el && window.app.el.messagesContainer) {
-              window.app.el.messagesContainer.innerHTML = '<div class="text-gray-500 text-sm mb-4 italic">Connected! Say Hi!</div>';
+              window.app.el.messagesContainer.innerHTML = '<div class="text-center py-4"><div class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full"><div class="h-2 w-2 bg-green-500 rounded-full"></div><span class="text-green-600 text-sm font-medium">Connected! Say Hi!</span></div></div>';
             }
           }
         });
@@ -1012,6 +1027,11 @@ export async function join(idOrLink) {
                   if (window.app && window.app.appendMessage) {
                     window.app.appendMessage(message);
                   }
+                } else if (message.type === 'PROFILE') {
+                  // Handle incoming profile message
+                  if (window.app && window.app.handleProfileReceived) {
+                    window.app.handleProfileReceived(message.profile);
+                  }
                 } else if (message.type === 'DISCONNECT') {
                   console.log("Received DISCONNECT message from peer");
                   // Clean up connection
@@ -1019,7 +1039,7 @@ export async function join(idOrLink) {
                     state.call.close();
                     state.call = null;
                   }
-                  if (state.dataConnection === dataConnection) {
+                  if (state.dataConnection) {
                     state.dataConnection.close();
                     state.dataConnection = null;
                   }

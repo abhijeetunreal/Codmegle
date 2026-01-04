@@ -2,62 +2,156 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Codmegle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Codmegle - Talk to Strangers</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+            body {
+                -webkit-tap-highlight-color: transparent;
+            }
+            /* Prevent zoom on input focus on iOS */
+            input, textarea, select {
+                font-size: 16px !important;
+            }
+        }
+        
+        /* Desktop optimizations */
+        @media (min-width: 1024px) {
+            .container-max {
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+        }
         /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .scale-x-flip { transform: scaleX(-1); }
+        
+        /* Custom gradient backgrounds */
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+        }
+        .bg-gradient-welcome {
+            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%);
+        }
+        .bg-gradient-message-you {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+        }
+        .bg-gradient-message-stranger {
+            background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+        }
+        
+        /* Smooth transitions */
+        * {
+            transition-property: color, background-color, border-color, transform, opacity;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 200ms;
+        }
+        
+        /* Button hover effects */
+        .btn-primary {
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        /* Message bubble animation */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .message-bubble {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        /* Pulse animation for status */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .pulse-slow {
+            animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
     </style>
 </head>
-<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+<body class="bg-gradient-welcome h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="bg-white border-b border-gray-300 p-4 flex justify-between items-center shadow-sm h-16 shrink-0 z-10">
-        <div class="flex items-center select-none cursor-pointer" onclick="window.location.reload()">
-            <span class="text-2xl font-bold tracking-tight text-gray-700">Cod</span>
-            <span class="text-2xl font-bold tracking-tight text-white bg-orange-500 px-1 transform -rotate-2 shadow-sm inline-block ml-0.5 rounded-sm">megle</span>
+    <header class="bg-white border-b border-gray-200 p-3 sm:p-4 flex justify-between items-center shadow-md h-14 sm:h-16 shrink-0 z-10 backdrop-blur-sm bg-white/95">
+        <div class="flex items-center select-none cursor-pointer group" onclick="window.location.reload()">
+            <span class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-800 group-hover:text-blue-600 transition-colors">Cod</span>
+            <span class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-orange-500 to-orange-600 px-1.5 sm:px-2 py-0.5 transform -rotate-2 shadow-lg inline-block ml-0.5 sm:ml-1 rounded-md group-hover:shadow-xl transition-shadow">megle</span>
         </div>
-        <div class="text-sm md:text-base text-gray-500 font-medium" id="online-count">
-            Connecting...
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <div class="h-1.5 w-1.5 sm:h-2 sm:w-2 bg-green-500 rounded-full pulse-slow"></div>
+            <div class="text-xs sm:text-sm md:text-base text-gray-600 font-semibold px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-100 rounded-full whitespace-nowrap" id="online-count">
+                Connecting...
+            </div>
         </div>
     </header>
 
     <!-- Welcome Screen -->
-    <div id="welcome-screen" class="flex-1 flex flex-col items-center justify-center bg-gray-50 p-6 text-center overflow-y-auto">
-        <div class="bg-white p-8 rounded-lg shadow-md max-w-2xl w-full border border-gray-200">
-            <h1 class="text-3xl md:text-5xl font-bold text-gray-800 mb-6">Talk to strangers!</h1>
-            <p class="text-gray-600 mb-8 text-lg">
-                Omegle (Codmegle) is a great place to meet new friends. When you use Codmegle, 
-                we pick someone else at random and let you talk one-on-one. 
-            </p>
+    <div id="welcome-screen" class="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-y-auto">
+        <div class="bg-white p-6 sm:p-8 md:p-10 lg:p-12 rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full border border-gray-100 transform transition-all duration-300 hover:shadow-3xl mx-2 sm:mx-4">
+            <div class="mb-6 sm:mb-8">
+                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-3 sm:mb-4 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 bg-clip-text text-transparent px-2">
+                    Talk to strangers!
+                </h1>
+                <p class="text-gray-600 mb-2 text-base sm:text-lg md:text-xl leading-relaxed max-w-2xl mx-auto px-2">
+                    Codmegle is a great place to meet new friends. When you use Codmegle, 
+                    we pick someone else at random and let you talk one-on-one.
+                </p>
+            </div>
             
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 text-left text-sm text-yellow-800">
-                <p class="font-bold">Terms of Service:</p>
-                <ul class="list-disc list-inside mt-2 space-y-1">
-                    <li>You must be 18+ to use this site.</li>
-                    <li>Do not transmit nudity, sexually explicit content, or illegal material.</li>
-                    <li>Be respectful to others.</li>
-                    <li><strong>Opening two tabs allows you to chat with yourself for testing!</strong></li>
-                </ul>
+            <div class="bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500 p-4 sm:p-5 mb-6 sm:mb-8 md:mb-10 text-left rounded-r-lg shadow-sm">
+                <div class="flex items-start gap-3">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <p class="font-bold text-amber-900 mb-2 text-base">Terms of Service:</p>
+                        <ul class="list-disc list-inside space-y-1.5 text-sm text-amber-800">
+                            <li>You must be 18+ to use this site.</li>
+                            <li>Do not transmit nudity, sexually explicit content, or illegal material.</li>
+                            <li>Be respectful to others.</li>
+                            <li><strong>Opening two tabs allows you to chat with yourself for testing!</strong></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
-            <div class="space-y-4">
-                <div class="text-gray-700 font-medium mb-2">Start chatting:</div>
-                <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <button onclick="app.startChat('text')" class="px-8 py-4 bg-white border-2 border-gray-300 text-gray-700 font-bold text-xl rounded hover:bg-gray-50 transition-colors shadow-sm active:translate-y-0.5">
-                        Text only
+            <div class="space-y-4 sm:space-y-6">
+                <div class="text-gray-700 font-semibold mb-3 sm:mb-4 text-base sm:text-lg">Start chatting:</div>
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2">
+                    <button onclick="app.startChat('text')" class="btn-primary w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-white border-2 border-gray-300 text-gray-700 font-bold text-base sm:text-lg rounded-xl hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 shadow-md active:translate-y-0.5 flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="message-square" class="w-5 h-5"></i>
+                        <span>Text only</span>
                     </button>
-                    <button onclick="app.startChat('video')" class="px-8 py-4 bg-blue-600 text-white font-bold text-xl rounded hover:bg-blue-700 transition-colors shadow-sm active:translate-y-0.5 flex items-center justify-center gap-2">
-                        <i data-lucide="video" class="w-6 h-6"></i>
-                        Video
+                    <button onclick="app.startChat('video')" class="btn-primary w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-gradient-primary text-white font-bold text-base sm:text-lg rounded-xl hover:shadow-xl shadow-lg active:translate-y-0.5 flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="video" class="w-5 h-5"></i>
+                        <span>Video</span>
                     </button>
                 </div>
             </div>
@@ -65,56 +159,91 @@
     </div>
 
     <!-- Chat Screen -->
-    <div id="chat-screen" class="hidden flex-1 flex flex-col h-full overflow-hidden bg-gray-100">
+    <div id="chat-screen" class="hidden flex-1 flex flex-col h-full overflow-hidden bg-gradient-to-b from-gray-50 to-white">
         
         <!-- Video Container -->
-        <div id="video-container" class="hidden h-64 sm:h-80 bg-black relative flex justify-center items-center shrink-0 border-b border-gray-700">
+        <div id="video-container" class="hidden h-48 sm:h-64 md:h-80 lg:h-96 bg-gradient-to-br from-gray-900 to-black relative flex justify-center items-center shrink-0 border-b-2 border-gray-800 shadow-2xl">
             <div class="w-full h-full relative">
                 <!-- Remote Video Placeholder -->
-                <div class="w-full h-full flex items-center justify-center bg-gray-900 text-white" id="remote-video-container">
+                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black" id="remote-video-container">
                     <div class="text-center">
-                        <div class="animate-pulse mb-2"><i data-lucide="video" class="mx-auto text-gray-600 w-12 h-12"></i></div>
-                        <p class="text-gray-500 text-sm">Waiting for remote video...</p>
+                        <div class="pulse-slow mb-4">
+                            <div class="mx-auto w-16 h-16 bg-blue-600/20 rounded-full flex items-center justify-center">
+                                <i data-lucide="video" class="text-blue-400 w-8 h-8"></i>
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-sm font-medium">Waiting for remote video...</p>
                     </div>
                 </div>
-                <div id="video-waiting-msg" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-gray-400 hidden">
-                    Waiting for partner...
+                <div id="video-waiting-msg" class="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm text-gray-300 hidden">
+                    <div class="text-center">
+                        <div class="pulse-slow mb-3">
+                            <div class="mx-auto w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                                <i data-lucide="users" class="text-blue-400 w-6 h-6"></i>
+                            </div>
+                        </div>
+                        <p class="font-semibold">Waiting for partner...</p>
+                    </div>
                 </div>
 
                 <!-- Local Video -->
-                <div class="absolute bottom-4 right-4 w-32 h-24 bg-gray-800 border-2 border-white shadow-lg overflow-hidden rounded">
+                <div class="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-24 h-18 sm:w-32 sm:h-24 md:w-40 md:h-30 lg:w-48 lg:h-36 bg-gray-800 border-2 sm:border-4 border-white shadow-2xl overflow-hidden rounded-lg sm:rounded-xl ring-1 sm:ring-2 ring-blue-500/50">
                     <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover scale-x-flip"></video>
-                    <div id="no-camera-msg" class="hidden w-full h-full flex items-center justify-center text-white text-xs">No Camera</div>
+                    <div id="no-camera-msg" class="hidden w-full h-full flex items-center justify-center text-white text-xs bg-gray-900/80 backdrop-blur-sm">
+                        <div class="text-center">
+                            <i data-lucide="video-off" class="w-6 h-6 mx-auto mb-1"></i>
+                            <p>No Camera</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Messages Area -->
-        <div class="flex-1 flex flex-col bg-white overflow-hidden relative border-t border-gray-200">
-            <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-2 font-sans">
-                <div class="text-gray-500 text-sm mb-4 italic">You're talking to a random stranger. Say Hi!</div>
+        <div class="flex-1 flex flex-col bg-white overflow-hidden relative">
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 font-sans">
+                <div class="text-center py-4">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full">
+                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow"></div>
+                        <span class="text-blue-600 text-sm font-medium italic">You're talking to a random stranger. Say Hi!</span>
+                    </div>
+                </div>
                 <!-- Messages will be injected here -->
             </div>
             
-            <div id="status-indicator" class="px-4 py-2 text-gray-500 italic text-sm animate-pulse hidden">
-                Looking for someone you can chat with...
+            <div id="status-indicator" class="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-blue-100 hidden">
+                <div class="flex items-center justify-center gap-3">
+                    <div class="flex gap-1">
+                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0s"></div>
+                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0.2s"></div>
+                        <div class="h-2 w-2 bg-blue-500 rounded-full pulse-slow" style="animation-delay: 0.4s"></div>
+                    </div>
+                    <p class="text-blue-600 font-semibold text-sm">Looking for someone you can chat with...</p>
+                </div>
             </div>
-            <div id="disconnect-indicator" class="px-4 py-2 text-gray-500 font-bold text-sm hidden">
-                Stranger has disconnected.
+            <div id="disconnect-indicator" class="px-6 py-4 bg-gradient-to-r from-red-50 to-orange-50 border-t border-red-100 hidden">
+                <div class="flex items-center justify-center gap-2">
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-600"></i>
+                    <p class="text-red-600 font-bold text-sm">Stranger has disconnected.</p>
+                </div>
             </div>
 
             <!-- Input Controls -->
-            <div class="p-4 bg-gray-100 border-t border-gray-300 flex items-center gap-2 shrink-0">
-                <button id="btn-stop-next" onclick="app.handleStopNext()" class="h-12 px-6 font-bold rounded shadow-sm text-sm uppercase tracking-wide transition-all bg-white border hover:bg-red-50 text-gray-700">
-                    Stop <span class="ml-1 text-xs text-gray-400 block -mt-1">Esc</span>
+            <div class="p-3 sm:p-4 md:p-6 bg-gradient-to-r from-gray-50 to-white border-t-2 border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 shrink-0 shadow-lg">
+                <button id="btn-stop-next" onclick="app.handleStopNext()" class="h-11 sm:h-12 px-4 sm:px-6 font-bold rounded-xl shadow-md text-xs sm:text-sm uppercase tracking-wide transition-all bg-white border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 hover:text-red-600 text-gray-700 active:translate-y-0.5 flex-shrink-0 justify-center items-center">
+                    <span class="flex items-center gap-1.5">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Stop</span>
+                    </span>
+                    <span class="ml-1 text-xs text-gray-400 hidden sm:block -mt-0.5">Esc</span>
                 </button>
 
-                <div class="flex-1 relative">
+                <div class="flex-1 relative flex items-center">
                     <input type="text" id="msg-input" placeholder="Waiting..." disabled
-                        class="w-full h-12 pl-4 pr-12 rounded border border-gray-300 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:bg-gray-200 disabled:text-gray-500">
+                        class="w-full h-11 sm:h-12 pl-4 sm:pl-5 pr-12 sm:pr-14 rounded-xl border-2 border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-gray-800 placeholder-gray-400 font-medium shadow-sm transition-all text-sm sm:text-base">
                     <button id="btn-send" onclick="app.sendMessage()" disabled
-                        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-800 disabled:text-gray-400">
-                        <i data-lucide="send" class="w-5 h-5"></i>
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-lg bg-gradient-primary text-white hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95">
+                        <i data-lucide="send" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                     </button>
                 </div>
             </div>
@@ -207,36 +336,11 @@
             // --- Core Actions ---
 
             startChat: async function(mode) {
-                this.mode = mode;
-                state.mode = mode;
-                this.status = 'searching';
-                state.isSearching = true;
-                this.roomId = null;
-
-                // UI Updates
-                this.el.welcomeScreen.classList.add('hidden');
-                this.el.chatScreen.classList.remove('hidden');
-                this.el.messagesContainer.innerHTML = '<div class="text-gray-500 text-sm mb-4 italic">Looking for someone to chat with...</div>';
+                // Save mode to localStorage
+                localStorage.setItem('codmegle_mode', mode);
                 
-                // Video UI
-                if (mode === 'video') {
-                    this.el.videoContainer.classList.remove('hidden');
-                    try {
-                        await this.startCamera();
-                    } catch (e) {
-                        console.error("Camera error:", e);
-                        showAlert("Could not access camera. Starting in text mode.", 'warning');
-                        this.mode = 'text';
-                        state.mode = 'text';
-                        this.el.videoContainer.classList.add('hidden');
-                    }
-                } else {
-                    this.el.videoContainer.classList.add('hidden');
-                    this.stopCamera();
-                }
-
-                this.updateUIState();
-                this.startMatching();
+                // Navigate to chat.html with mode parameter
+                window.location.href = `chat.html?mode=${mode}`;
             },
             
             startMatching: async function() {
@@ -385,26 +489,8 @@
             },
             
             joinSession: function(code) {
-                // Only update UI if not already connected
-                if (!state.isConnected) {
-                    this.status = 'connected';
-                    state.isConnected = true;
-                    state.isSearching = false;
-                    this.lookingForMatch = false;
-                    this.stopBroadcastingSearch();
-                    
-                    // UI Updates
-                    this.el.welcomeScreen.classList.add('hidden');
-                    this.el.chatScreen.classList.remove('hidden');
-                    this.el.messagesContainer.innerHTML = '<div class="text-gray-500 text-sm mb-4 italic">Connected! Say Hi!</div>';
-                    
-                    // Show video container if in video mode
-                    if (this.mode === 'video') {
-                        this.el.videoContainer.classList.remove('hidden');
-                    }
-                    
-                    this.updateUIState();
-                }
+                // Navigate to chat.html with join code
+                window.location.href = `chat.html?join=${code}`;
             },
 
             handleStopNext: function() {
@@ -439,7 +525,10 @@
                 state.isSearching = false;
                 
                 // Clear messages
-                this.el.messagesContainer.innerHTML = '<div class="text-gray-500 text-sm mb-4 italic">Stranger has disconnected.</div>';
+                this.el.messagesContainer.innerHTML = '<div class="text-center py-4"><div class="inline-flex items-center gap-2 px-4 py-2 bg-red-50 rounded-full"><i data-lucide="alert-circle" class="w-4 h-4 text-red-600"></i><span class="text-red-600 text-sm font-medium">Stranger has disconnected.</span></div></div>';
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
                 
                 this.updateUIState();
             },
@@ -525,15 +614,20 @@
                 // Controls
                 this.el.msgInput.disabled = !isConnected;
                 this.el.btnSend.disabled = !isConnected;
-                this.el.msgInput.placeholder = isConnected ? "Type your message..." : (isDisconnected ? "Stranger disconnected." : "Waiting...");
+                this.el.msgInput.placeholder = isConnected ? "Type your message..." : (isDisconnected ? "Stranger disconnected" : "Waiting for connection...");
                 
                 // Button Text
                 if (isDisconnected) {
-                    this.el.btnStopNext.className = "h-12 px-6 font-bold rounded shadow-sm text-sm uppercase tracking-wide transition-all bg-blue-600 hover:bg-blue-700 text-white";
-                    this.el.btnStopNext.innerHTML = 'New Chat <span class="ml-1 text-xs text-blue-200 block -mt-1">Esc</span>';
+                    this.el.btnStopNext.className = "h-12 px-6 font-bold rounded-xl shadow-md text-sm uppercase tracking-wide transition-all bg-gradient-primary hover:shadow-lg text-white active:translate-y-0.5 flex-shrink-0";
+                    this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-4 h-4"></i><span>New Chat</span></span><span class="ml-1 text-xs text-blue-200 block -mt-0.5">Esc</span>';
                 } else {
-                    this.el.btnStopNext.className = "h-12 px-6 font-bold rounded shadow-sm text-sm uppercase tracking-wide transition-all bg-white border hover:bg-red-50 text-gray-700";
-                    this.el.btnStopNext.innerHTML = 'Stop <span class="ml-1 text-xs text-gray-400 block -mt-1">Esc</span>';
+                    this.el.btnStopNext.className = "h-12 px-6 font-bold rounded-xl shadow-md text-sm uppercase tracking-wide transition-all bg-white border-2 border-gray-300 hover:border-red-400 hover:bg-red-50 hover:text-red-600 text-gray-700 active:translate-y-0.5 flex-shrink-0";
+                    this.el.btnStopNext.innerHTML = '<span class="flex items-center gap-1.5"><i data-lucide="x" class="w-4 h-4"></i><span>Stop</span></span><span class="ml-1 text-xs text-gray-400 block -mt-0.5">Esc</span>';
+                }
+                
+                // Re-initialize icons after button update
+                if (window.lucide) {
+                    lucide.createIcons();
                 }
 
                 // Indicators
@@ -548,13 +642,29 @@
             appendMessage: function(msg) {
                 const isMe = msg.sender === this.user.uid;
                 const div = document.createElement('div');
-                div.className = "py-1";
+                div.className = `message-bubble flex ${isMe ? 'justify-end' : 'justify-start'} mb-3`;
+                
+                const time = new Date(msg.timestamp);
+                const timeStr = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                
                 div.innerHTML = `
-                    <span class="font-bold ${isMe ? 'text-blue-600' : 'text-red-600'}">${isMe ? 'You: ' : 'Stranger: '}</span>
-                    <span class="text-gray-800 break-words">${this.escapeHtml(msg.text)}</span>
+                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%] md:max-w-[60%]">
+                        <div class="flex items-center gap-2 mb-1 px-1">
+                            <span class="text-xs font-semibold ${isMe ? 'text-blue-600' : 'text-gray-600'}">${isMe ? 'You' : 'Stranger'}</span>
+                            <span class="text-xs text-gray-400">${timeStr}</span>
+                        </div>
+                        <div class="px-4 py-2.5 rounded-2xl shadow-md ${isMe ? 'bg-gradient-message-you text-white rounded-br-sm' : 'bg-gradient-message-stranger text-gray-800 border border-gray-200 rounded-bl-sm'}">
+                            <p class="break-words text-sm leading-relaxed">${this.escapeHtml(msg.text)}</p>
+                        </div>
+                    </div>
                 `;
                 this.el.messagesContainer.appendChild(div);
                 this.el.messagesContainer.scrollTop = this.el.messagesContainer.scrollHeight;
+                
+                // Re-initialize icons for new message
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
             },
 
             escapeHtml: function(unsafe) {
@@ -573,7 +683,7 @@
                     // Count only valid Codmegle sessions (5-character codes)
                     const validSessions = allSessions.filter(s => s.code && s.code.length === 5);
                     const count = validSessions.length;
-                    this.el.onlineCount.innerText = count > 0 ? count.toLocaleString() + ' online now' : 'Connecting...';
+                    this.el.onlineCount.innerText = count > 0 ? count.toLocaleString() + ' online' : 'Connecting...';
                 } catch (err) {
                     console.warn("Error updating online count:", err);
                     this.el.onlineCount.innerText = '... online now';

@@ -1,0 +1,483 @@
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+    body {
+        -webkit-tap-highlight-color: transparent;
+    }
+    input, textarea, select {
+        font-size: 16px !important;
+    }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1024px) {
+    .container-max {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+}
+
+/* Desktop split layout - only when video container is visible */
+@media (min-width: 1024px) {
+    .desktop-split-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    /* When video mode is active, switch to row layout */
+    .desktop-split-container.video-mode {
+        flex-direction: row;
+    }
+    
+    .desktop-video-panel {
+        flex: 1 1 auto;
+        min-width: 400px;
+        height: 100%;
+        overflow: hidden;
+        transition: width 0.2s ease;
+    }
+    
+    .desktop-chat-panel {
+        flex: 1 1 auto;
+        height: 100%;
+        overflow: hidden;
+        transition: width 0.2s ease;
+        background: white;
+    }
+    
+    /* In video mode, chat panel has fixed width */
+    .desktop-split-container.video-mode .desktop-chat-panel {
+        flex: 0 0 auto;
+        min-width: 300px;
+        width: 35%;
+        border-left: 1px solid #e5e7eb;
+    }
+    
+    .resizable-splitter {
+        flex: 0 0 5px;
+        background: #e5e7eb;
+        cursor: col-resize;
+        position: relative;
+        transition: background-color 0.2s ease;
+        z-index: 10;
+    }
+    
+    .resizable-splitter:hover {
+        background: #3b82f6;
+    }
+    
+    .resizable-splitter:active {
+        background: #2563eb;
+    }
+    
+    .resizable-splitter::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #cbd5e1;
+        transform: translateX(-50%);
+        transition: background-color 0.2s ease;
+    }
+    
+    .resizable-splitter:hover::before {
+        background: #60a5fa;
+    }
+    
+    .resizable-splitter.dragging {
+        background: #2563eb;
+    }
+    
+    .resizable-splitter.dragging::before {
+        background: #93c5fd;
+    }
+}
+
+/* Mobile: hide splitter and use vertical layout */
+@media (max-width: 1023px) {
+    .resizable-splitter {
+        display: none;
+    }
+    
+    .desktop-split-container {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .desktop-video-panel,
+    .desktop-chat-panel {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.scale-x-flip { transform: scaleX(-1); }
+
+/* Custom gradient backgrounds */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+}
+.bg-gradient-message-you {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+}
+.bg-gradient-message-stranger {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+/* Smooth transitions */
+* {
+    transition-property: color, background-color, border-color, transform, opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+}
+
+/* Button hover effects */
+.btn-primary {
+    transition: all 0.2s ease;
+}
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+}
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Media control button transitions */
+#btn-mute, #btn-video-toggle {
+    transition: all 0.3s ease;
+}
+
+/* Video preview indicators */
+#mute-indicator, #video-off-indicator {
+    transition: opacity 0.3s ease, transform 0.2s ease;
+    animation: pulse-badge 2s ease-in-out infinite;
+    pointer-events: auto !important;
+    cursor: pointer;
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+/* Draggable local video container */
+#local-video-container {
+    transition: box-shadow 0.2s ease, transform 0.1s ease;
+    z-index: 30 !important;
+    position: absolute !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+#local-video-container:hover {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transform: scale(1.02);
+}
+
+#local-video-container:active {
+    cursor: grabbing !important;
+}
+
+/* Ensure video element is visible and doesn't block dragging */
+#local-video-container video {
+    position: relative;
+    z-index: 1;
+    pointer-events: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+/* Ensure container can receive pointer events */
+#local-video-container {
+    pointer-events: auto !important;
+}
+
+/* Ensure video container has proper stacking context */
+#video-container {
+    position: relative;
+    z-index: 0;
+}
+
+#video-container > div {
+    position: relative;
+}
+
+/* Remote video container should be below local video */
+#remote-video-container {
+    z-index: 1;
+}
+
+/* Video waiting message should be above remote but below local */
+#video-waiting-msg {
+    z-index: 10;
+}
+
+/* Message bubble animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.message-bubble {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Pulse animation for status */
+@keyframes pulse-slow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+.pulse-slow {
+    animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Glassmorphism effects */
+.glass-effect {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Enhanced desktop video container */
+@media (min-width: 1024px) {
+    #video-container {
+        border-radius: 0;
+    }
+    
+    .desktop-video-panel {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    }
+    
+    /* Improved message bubbles for desktop */
+    .message-bubble {
+        max-width: 70% !important;
+    }
+    
+    /* Better chat panel styling */
+    .desktop-chat-panel {
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Enhanced input area */
+    .desktop-chat-panel .bg-gradient-to-r {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-top: 1px solid #e5e7eb;
+    }
+}
+
+/* Large desktop optimizations */
+@media (min-width: 1280px) {
+    .message-bubble {
+        max-width: 65% !important;
+    }
+    
+    #messages-container {
+        padding: 1.5rem 2rem;
+    }
+}
+
+@media (min-width: 1536px) {
+    .message-bubble {
+        max-width: 60% !important;
+    }
+    
+    #messages-container {
+        padding: 2rem 2.5rem;
+    }
+}
+
+/* Improved video overlay styling */
+.video-overlay-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#video-container:hover .video-overlay-controls {
+    opacity: 1;
+}
+
+/* Better scrollbar for chat */
+.desktop-chat-panel #messages-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.desktop-chat-panel #messages-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.desktop-chat-panel #messages-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.desktop-chat-panel #messages-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Profile Modal */
+.profile-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.profile-modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.profile-modal {
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.profile-modal-overlay.active .profile-modal {
+    transform: scale(1);
+}
+
+.profile-header {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    padding: 2rem;
+    border-radius: 1rem 1rem 0 0;
+    color: white;
+    text-align: center;
+    position: relative;
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 2.5rem;
+    font-weight: bold;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+}
+
+.profile-body {
+    padding: 1.5rem;
+}
+
+.profile-info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.profile-info-item:last-child {
+    border-bottom: none;
+}
+
+.profile-info-icon {
+    width: 20px;
+    height: 20px;
+    color: #3b82f6;
+    flex-shrink: 0;
+}
+
+.profile-info-label {
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 100px;
+}
+
+.profile-info-value {
+    color: #111827;
+    flex: 1;
+}
+
+.profile-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s ease;
+}
+
+.profile-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.profile-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+}
+
+.profile-btn:hover {
+    background: #f3f4f6;
+    color: #3b82f6;
+}
+

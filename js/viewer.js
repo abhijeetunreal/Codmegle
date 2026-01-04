@@ -16,7 +16,13 @@ export function enterViewerMode(remoteStream) {
     remoteVideo.srcObject = remoteStream;
     remoteVideo.autoplay = true;
     remoteVideo.playsInline = true;
+    remoteVideo.muted = false; // Explicitly enable audio so users can hear remote person
     remoteVideo.className = 'w-full h-full object-cover';
+    
+    // Ensure video plays with audio
+    remoteVideo.play().catch(err => {
+      console.warn("Remote video play error:", err);
+    });
     
     dom.remoteVideoContainer.appendChild(remoteVideo);
   }
@@ -26,14 +32,21 @@ export function enterViewerMode(remoteStream) {
     dom.videoWaitingMsg.classList.add('hidden');
   }
   
-  // Handle stream end
+  // Handle stream end for both video and audio tracks
   remoteStream.getVideoTracks().forEach(track => {
     track.onended = () => {
-      console.log('Remote stream ended');
+      console.log('Remote video stream ended');
       state.isConnected = false;
       if (dom.videoWaitingMsg) {
         dom.videoWaitingMsg.classList.remove('hidden');
       }
+    };
+  });
+  
+  // Handle audio track end
+  remoteStream.getAudioTracks().forEach(track => {
+    track.onended = () => {
+      console.log('Remote audio stream ended');
     };
   });
 }

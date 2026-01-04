@@ -25,12 +25,16 @@ export function initDOM() {
     dom.camera.id = 'camera';
     dom.camera.autoplay = true;
     dom.camera.playsInline = true;
+    dom.camera.muted = true; // Mute to prevent local audio playback/echo
     dom.camera.style.position = 'absolute';
     dom.camera.style.top = '-9999px';
     dom.camera.style.left = '-9999px';
     dom.camera.style.width = '1px';
     dom.camera.style.height = '1px';
     document.body.appendChild(dom.camera);
+  } else {
+    // Ensure existing camera element is also muted
+    dom.camera.muted = true;
   }
   
   dom.welcomeScreen = document.getElementById('welcome-screen');
