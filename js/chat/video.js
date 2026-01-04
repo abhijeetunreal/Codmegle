@@ -246,16 +246,86 @@ export function setupVideoMethods(app) {
                 }
             }
             
-            // Update state.hostStream if it exists - stop old tracks and add new ones
-            if (state.hostStream) {
-                // Stop old tracks
-                state.hostStream.getTracks().forEach(track => track.stop());
-                
-                // Add new tracks
-                newStream.getTracks().forEach(track => {
-                    state.hostStream.addTrack(track);
+            // If there's an active call, replace tracks in the peer connection
+            if (state.call && state.isConnected) {
+                try {
+                    // Access the underlying RTCPeerConnection from PeerJS call
+                    // PeerJS may expose it as peerConnection or _peerConnection
+                    const peerConnection = state.call.peerConnection || state.call._peerConnection;
+                    
+                    if (peerConnection && typeof peerConnection.getSenders === 'function') {
+                        // Get all senders from the peer connection
+                        const senders = peerConnection.getSenders();
+                        
+                        // Get tracks from the new stream
+                        const newVideoTrack = newStream.getVideoTracks()[0] || null;
+                        const newAudioTrack = newStream.getAudioTracks()[0] || null;
+                        
+                        if (!newVideoTrack && !newAudioTrack) {
+                            console.warn("No tracks available in new stream for replacement");
+                        }
+                        
+                        // Replace tracks on each sender
+                        let videoReplaced = false;
+                        let audioReplaced = false;
+                        
+                        for (const sender of senders) {
+                            if (sender && sender.track) {
+                                const trackKind = sender.track.kind;
+                                
+                                if (trackKind === 'video' && newVideoTrack) {
+                                    try {
+                                        await sender.replaceTrack(newVideoTrack);
+                                        console.log("Replaced video track in peer connection");
+                                        videoReplaced = true;
+                                    } catch (replaceErr) {
+                                        console.error("Error replacing video track:", replaceErr);
+                                    }
+                                } else if (trackKind === 'audio' && newAudioTrack) {
+                                    try {
+                                        await sender.replaceTrack(newAudioTrack);
+                                        console.log("Replaced audio track in peer connection");
+                                        audioReplaced = true;
+                                    } catch (replaceErr) {
+                                        console.error("Error replacing audio track:", replaceErr);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Log if tracks weren't replaced (for debugging)
+                        if (newVideoTrack && !videoReplaced) {
+                            console.warn("Video track available but not replaced - no matching sender found");
+                        }
+                        if (newAudioTrack && !audioReplaced) {
+                            console.warn("Audio track available but not replaced - no matching sender found");
+                        }
+                    } else {
+                        console.warn("Peer connection not accessible or getSenders not available");
+                    }
+                } catch (peerErr) {
+                    console.warn("Error updating peer connection tracks:", peerErr);
+                    // Continue with stream update even if peer connection update fails
+                }
+            }
+            
+            // Update state.hostStream reference to the new stream
+            // Stop old tracks from the previous hostStream if it exists
+            if (state.hostStream && state.hostStream !== newStream) {
+                const oldTracks = state.hostStream.getTracks();
+                oldTracks.forEach(track => {
+                    // Only stop tracks that aren't in the new stream
+                    const trackStillExists = newStream.getTracks().some(
+                        newTrack => newTrack.id === track.id
+                    );
+                    if (!trackStillExists) {
+                        track.stop();
+                    }
                 });
             }
+            
+            // Update state.hostStream to point to the new stream
+            state.hostStream = newStream;
             
             // dom.camera is already updated in switchCameraDevice, but ensure it's set
             if (dom.camera && dom.camera.srcObject !== newStream) {

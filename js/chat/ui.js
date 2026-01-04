@@ -443,7 +443,7 @@ export function setupUIMethods(app) {
         const prefs = getSavedDevicePreferences();
         
         // Enumerate devices
-        const { cameras, microphones } = await enumerateDevices();
+        const { cameras, microphones, speakers } = await enumerateDevices();
         
         // Populate camera select
         this.el.settingsCameraSelect.innerHTML = '<option value="">Default Camera</option>';
@@ -468,6 +468,20 @@ export function setupUIMethods(app) {
             }
             this.el.settingsAudioSelect.appendChild(option);
         });
+        
+        // Populate speaker select
+        if (this.el.settingsSpeakerSelect) {
+            this.el.settingsSpeakerSelect.innerHTML = '<option value="">Default Speaker</option>';
+            speakers.forEach(speaker => {
+                const option = document.createElement('option');
+                option.value = speaker.deviceId;
+                option.textContent = speaker.label;
+                if (speaker.deviceId === prefs.speakerId) {
+                    option.selected = true;
+                }
+                this.el.settingsSpeakerSelect.appendChild(option);
+            });
+        }
     };
     
     app.applyDeviceSettings = async function() {
@@ -477,12 +491,18 @@ export function setupUIMethods(app) {
         
         const selectedCameraId = this.el.settingsCameraSelect.value || null;
         const selectedAudioId = this.el.settingsAudioSelect.value || null;
+        const selectedSpeakerId = this.el.settingsSpeakerSelect ? (this.el.settingsSpeakerSelect.value || null) : null;
         
         // Import saveDevicePreferences and switchDevice
         const { saveDevicePreferences, switchDevice, getCurrentStream } = await import('../camera.js');
         
         // Save preferences
-        saveDevicePreferences(selectedCameraId, selectedAudioId);
+        saveDevicePreferences(selectedCameraId, selectedAudioId, selectedSpeakerId);
+        
+        // Apply speaker selection to remote video element if available
+        if (selectedSpeakerId) {
+            this.applySpeakerSelection(selectedSpeakerId);
+        }
         
         // If camera is active, switch devices
         if (this.mode === 'video' && (this.localStream || getCurrentStream())) {
@@ -501,6 +521,29 @@ export function setupUIMethods(app) {
         
         // Close modal
         this.closeSettingsModal();
+    };
+    
+    app.applySpeakerSelection = function(speakerId) {
+        // Find the remote video element in the remote video container
+        const remoteVideoContainer = document.getElementById('remote-video-container');
+        if (!remoteVideoContainer) {
+            return;
+        }
+        
+        // Find the video element (it should be the first video child)
+        const remoteVideo = remoteVideoContainer.querySelector('video');
+        if (!remoteVideo) {
+            return;
+        }
+        
+        // Check if setSinkId is supported
+        if (typeof remoteVideo.setSinkId === 'function') {
+            remoteVideo.setSinkId(speakerId).catch(err => {
+                console.warn("Failed to set audio output device:", err);
+            });
+        } else {
+            console.warn("setSinkId is not supported in this browser");
+        }
     };
     
     app.initTheme = function() {

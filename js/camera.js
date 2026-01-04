@@ -32,10 +32,18 @@ export async function enumerateDevices() {
         kind: device.kind
       }));
     
-    return { cameras, microphones };
+    const speakers = devices
+      .filter(device => device.kind === 'audiooutput')
+      .map(device => ({
+        deviceId: device.deviceId,
+        label: device.label || `Speaker ${device.deviceId.substring(0, 8)}`,
+        kind: device.kind
+      }));
+    
+    return { cameras, microphones, speakers };
   } catch (err) {
     console.error("Device enumeration error:", err);
-    return { cameras: [], microphones: [] };
+    return { cameras: [], microphones: [], speakers: [] };
   }
 }
 
@@ -43,12 +51,13 @@ export async function enumerateDevices() {
 export function getSavedDevicePreferences() {
   return {
     cameraId: localStorage.getItem('codmegle_selectedCameraId') || null,
-    audioId: localStorage.getItem('codmegle_selectedAudioId') || null
+    audioId: localStorage.getItem('codmegle_selectedAudioId') || null,
+    speakerId: localStorage.getItem('codmegle_selectedSpeakerId') || null
   };
 }
 
 // Save device preferences
-export function saveDevicePreferences(cameraId, audioId) {
+export function saveDevicePreferences(cameraId, audioId, speakerId) {
   if (cameraId) {
     localStorage.setItem('codmegle_selectedCameraId', cameraId);
   } else {
@@ -59,6 +68,12 @@ export function saveDevicePreferences(cameraId, audioId) {
     localStorage.setItem('codmegle_selectedAudioId', audioId);
   } else {
     localStorage.removeItem('codmegle_selectedAudioId');
+  }
+  
+  if (speakerId) {
+    localStorage.setItem('codmegle_selectedSpeakerId', speakerId);
+  } else {
+    localStorage.removeItem('codmegle_selectedSpeakerId');
   }
 }
 

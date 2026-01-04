@@ -44,7 +44,8 @@ export function createApp() {
             btnSettings: document.getElementById('btn-settings'),
             settingsModal: document.getElementById('settings-modal-overlay'),
             settingsCameraSelect: document.getElementById('settings-camera-select'),
-            settingsAudioSelect: document.getElementById('settings-audio-select')
+            settingsAudioSelect: document.getElementById('settings-audio-select'),
+            settingsSpeakerSelect: document.getElementById('settings-speaker-select')
         },
 
         init: async function() {
