@@ -244,6 +244,21 @@
                         </select>
                     </div>
                     
+                    <div class="device-select-group">
+                        <div class="device-select-header">
+                            <div class="device-icon-wrapper">
+                                <i data-lucide="volume-2" class="device-icon"></i>
+                            </div>
+                            <div class="device-label-wrapper">
+                                <label class="device-label">Speaker</label>
+                                <span class="device-hint">Choose your audio output device</span>
+                            </div>
+                        </div>
+                        <select id="settings-speaker-select" class="device-select">
+                            <option value="">Loading speakers...</option>
+                        </select>
+                    </div>
+                    
                     <div class="settings-actions">
                         <button onclick="app.applyDeviceSettings()" class="settings-apply-btn">
                             <i data-lucide="check" class="w-4 h-4"></i>

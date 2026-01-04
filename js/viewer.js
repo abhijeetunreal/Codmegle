@@ -1,6 +1,7 @@
 // Viewer mode for receiving remote streams
 import { state } from './state.js';
 import { dom } from './dom.js';
+import { getSavedDevicePreferences } from './camera.js';
 
 export function enterViewerMode(remoteStream) {
   state.remoteStream = remoteStream;
@@ -18,6 +19,14 @@ export function enterViewerMode(remoteStream) {
     remoteVideo.playsInline = true;
     remoteVideo.muted = false; // Explicitly enable audio so users can hear remote person
     remoteVideo.className = 'w-full h-full object-cover';
+    
+    // Apply saved speaker preference if available
+    const prefs = getSavedDevicePreferences();
+    if (prefs.speakerId && typeof remoteVideo.setSinkId === 'function') {
+      remoteVideo.setSinkId(prefs.speakerId).catch(err => {
+        console.warn("Failed to set audio output device:", err);
+      });
+    }
     
     // Ensure video plays with audio
     remoteVideo.play().catch(err => {
